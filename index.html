@@ -1,0 +1,1201 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>יחידה 4 – מנהלים את המרוץ מהמוקד העירוני</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700;800&display=swap" rel="stylesheet">
+<!--
+  מבנה הקובץ (להמרה ל-Storyline) – לפי העיצוב של "יח' 4.story" ותמונות העיצוב בתיקייה:
+  - במה קבועה 1200x675 (גודל הסטורי). כל רכיב ממוקם בפיקסלים של הסטורי (left/top/width/height).
+  - <section class="slide"> = שקף. data-title = שם השקף, data-chapter = פרק בתפריט העליון (0-4).
+  - <div class="layer" data-layer="..."> = שכבה בתוך השקף (משוב נכון / לא נכון / נסו שוב / פופאפ).
+  - #master = פס עליון (לוגו + תפריט פרקים) + מד המהירות בפינה.
+  - .shot = צילום מסך; .hs = אזור לחיצה (Hotspot) באחוזים מגודל התמונה; data-step = סדר הלחיצה.
+  - .opt = תשובה בשאלת בחירה (data-correct="1" לתשובה הנכונה). .dd-card / .dd-slot = שאלת גרירה.
+  - צבעים: כחול כהה #001930 | תכלת #6CCFF6 | ירוק #B2D234 | כתום #F99D26.
+-->
+<style>
+:root{--navy:#001930;--sky:#6CCFF6;--green:#B2D234;--orange:#F99D26;--gray:#969696}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:#0a1220;overflow:hidden}
+body{font-family:'Assistant',Arial,sans-serif;color:var(--navy);-webkit-font-smoothing:antialiased}
+#stage{position:absolute;width:1200px;height:675px;left:50%;top:50%;transform-origin:center center;overflow:hidden;background:#000;direction:rtl}
+.a{position:absolute}
+img{display:block;user-select:none;-webkit-user-drag:none}
+button{font-family:inherit;cursor:pointer;border:0;background:none;color:inherit}
+b{font-weight:800}
+
+/* font sizes */
+.f9{font-size:12px}.f10{font-size:13.3px}.f11{font-size:14.7px}.f128{font-size:17px}.f14{font-size:18.7px}.f16{font-size:21.3px}.f192{font-size:25.6px}.f27{font-size:36px}
+.lh{line-height:1.3}
+.w{color:#fff}.sky{color:var(--sky)}.grn{color:var(--green)}.org{color:var(--orange)}.nv{color:var(--navy)}
+.c{text-align:center}.r{text-align:right}
+
+/* slides & layers */
+.slide{position:absolute;inset:0;display:none;overflow:hidden}
+.slide.active{display:block;animation:fadeIn .4s ease}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.layer{position:absolute;inset:0;display:none;z-index:40}
+.layer.show{display:block;animation:fadeIn .3s ease}
+.dim{position:absolute;left:0;top:45px;width:1200px;height:630px;background:rgba(0,0,0,.5)}
+.fbbox{position:absolute;inset:0;transform:scale(.8);transform-origin:50% 50%}
+.fbbox.low{transform:scale(.85);transform-origin:50% 100%}
+.fbchar{z-index:5;animation:rise .45s ease .1s both}
+.slide.answered > :not(.bg):not(.callout):not(.layer){visibility:hidden}   /* question area hidden while its feedback card shows */
+.fbrow{display:flex;align-items:center;justify-content:center;gap:10px;color:var(--navy)}
+.fbrow .vx{width:44px;height:44px}
+.fbchips{display:flex;justify-content:center;gap:14px;flex-wrap:wrap}
+.fbchips span{display:flex;align-items:center;gap:8px;background:#f3f6fa;border-radius:22px;padding:5px 14px 5px 16px;font-size:15.5px;color:var(--navy)}
+.fbchips img{width:28px;height:28px}
+.callout > b:first-child{font-size:23px;line-height:1.15}
+
+/* master: white bar, logo, chapter menu, sound toggle */
+#master{position:absolute;inset:0;z-index:30;pointer-events:none}
+#master.hidden{display:none}
+.hdr{position:absolute;left:0;top:0;width:1200px;height:44px;background:#fff;box-shadow:0 1px 6px rgba(0,0,0,.25)}
+.hdr .logo{position:absolute;left:1110px;top:5px;height:34px}
+.menu{position:absolute;right:113px;top:0;height:44px;display:flex;align-items:center;font-size:15.5px;color:#111;white-space:nowrap}
+.menu span{padding:0 6px;line-height:1}
+.menu span+span{border-right:1.5px solid #111}
+.menu span.cur{font-weight:800}
+#sound{position:absolute;left:14px;top:7px;width:30px;height:30px;border-radius:50%;background:var(--navy);display:flex;align-items:center;justify-content:center;pointer-events:auto;transition:transform .15s}
+#sound:hover{transform:scale(1.1)}
+#sound svg{width:18px;height:18px}
+#sound .off{display:none}
+#sound.muted .on{display:none}
+#sound.muted .off{display:block}
+
+/* nav buttons: white circle, dark arrow (as in the design renders) */
+#controls{position:absolute;inset:0;z-index:60;pointer-events:none}
+.navbtn{position:absolute;top:607px;width:50px;height:50px;border-radius:50%;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;pointer-events:auto;transition:transform .15s,opacity .2s}
+.navbtn:hover{transform:scale(1.08)}
+.navbtn svg{width:34px;height:34px}
+#btnNext{left:15px}
+#btnPrev{left:1133px}
+.navbtn.gone{display:none}
+.navbtn.disabled{opacity:.35;pointer-events:none;filter:grayscale(1)}
+
+/* entrance animations (re-run each time a slide / layer is shown) */
+@keyframes rise{from{opacity:0;translate:0 16px}to{opacity:1;translate:0 0}}
+@keyframes popin{0%{opacity:0;scale:.6}70%{opacity:1;scale:1.06}100%{opacity:1;scale:1}}
+@keyframes slidein{from{opacity:0;translate:-60px 0}to{opacity:1;translate:0 0}}
+@keyframes dropin{0%{opacity:0;translate:0 -40px;scale:.9}70%{opacity:1;translate:0 4px;scale:1.02}100%{opacity:1;translate:0 0;scale:1}}
+.in{animation:rise .5s ease var(--d,0s) both}
+.in.pop,.layer .in.card,.layer .in.banner{animation:popin .45s ease var(--d,0s) both}
+.pulse.in{animation:rise .5s ease var(--d,0s) both,pulse 1.8s ease-in-out calc(var(--d,0s) + .5s) infinite}
+.mcard.next .ic,.mcard.next .num{animation:icglow 1.6s ease-in-out infinite}
+@keyframes icglow{0%,100%{filter:drop-shadow(0 0 0 rgba(108,207,246,0))}50%{filter:drop-shadow(0 0 7px rgba(108,207,246,.95)) brightness(1.15)}}
+.mcard.next .lbl{font-weight:800}
+.vx{object-fit:contain;animation:popin .5s cubic-bezier(.3,1.6,.5,1) .15s both}
+.coach.show img:not(.vx){animation:rise .45s ease both}
+.coach.show .callout{animation:popin .4s ease .1s both}
+.after-video{opacity:0;pointer-events:none;transition:opacity .6s ease}
+.after-video.shown{opacity:1;pointer-events:auto}
+.slide.screen{cursor:pointer}
+
+/* story button: white, light-blue border */
+.btn{position:absolute;display:flex;align-items:center;justify-content:center;text-align:center;background:#fff;border:1px solid var(--sky);border-radius:10px;color:var(--navy);font-size:17px;font-weight:700;line-height:1.15;padding:0 10px;box-shadow:0 2px 6px rgba(0,0,0,.25);transition:background .15s,transform .15s}
+.btn:hover{background:var(--sky);transform:scale(1.03)}
+.pulse{animation:pulse 1.8s ease-in-out infinite}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(108,207,246,.8)}60%{box-shadow:0 0 0 10px rgba(108,207,246,0)}}
+
+/* white cards & callouts */
+.card{position:absolute;background:#fff;border:1px solid var(--navy);border-radius:20px;box-shadow:0 4px 18px rgba(0,0,0,.35)}
+.callout{position:absolute;background:#fff;border:1.5px solid var(--navy);border-radius:16px;padding:10px 16px;color:var(--navy);line-height:1.25;box-shadow:0 3px 10px rgba(0,0,0,.25)}
+/* bubble tail: a navy triangle with a white triangle on top – clean edge, no seam */
+.callout::before,.callout::after{content:"";position:absolute;width:0;height:0;border-style:solid}
+.callout::before{bottom:-17px;border-width:17px 11px 0 11px;border-color:var(--navy) transparent transparent transparent}
+.callout::after{bottom:-14px;border-width:15px 9.5px 0 9.5px;border-color:#fff transparent transparent transparent}
+.callout.tl::before{left:36px}.callout.tl::after{left:37.5px}
+.callout.tr::before{right:36px}.callout.tr::after{right:37.5px}
+/* V / X inside the bubble, on the left */
+.callout:has(> .vx){padding-left:74px;min-height:78px;width:auto!important;min-width:230px;max-width:330px;display:flex;flex-direction:column;justify-content:center}
+.callout > .vx{position:absolute;left:12px;top:50%;width:52px;height:52px;margin-top:-26px;z-index:1}
+.callout > .cont{align-self:center}
+/* explanation speech bubble (Maya talks to the learner) */
+.speech{position:absolute;background:#fff;border:2px solid var(--navy);border-radius:22px;padding:18px 24px;color:var(--navy);box-shadow:0 8px 24px rgba(0,0,0,.45)}
+.speech::before,.speech::after{content:"";position:absolute;width:0;height:0;border-style:solid}
+.speech.tail-left::before{left:-26px;top:var(--ty,60px);border-width:13px 26px 13px 0;border-color:transparent var(--navy) transparent transparent}
+.speech.tail-left::after{left:-22px;top:calc(var(--ty,60px) + 2px);border-width:11px 23px 11px 0;border-color:transparent #fff transparent transparent}
+.speech.tail-bl::before{left:26px;bottom:-30px;border-width:30px 0 0 34px;border-color:var(--navy) transparent transparent transparent}
+.speech.tail-bl::after{left:29px;bottom:-25px;border-width:26px 0 0 29px;border-color:#fff transparent transparent transparent}
+.chips{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px}
+.chips span{background:#eaf8fe;border:1.5px solid var(--sky);border-radius:20px;padding:4px 14px;font-size:15px;font-weight:700}
+.chips small{font-weight:400;font-size:12px}
+.chips.dark span{background:rgba(108,207,246,.15);color:#fff}
+.examples{display:flex;gap:12px;margin-top:8px}
+.examples div{flex:1;background:#f3f6fa;border-radius:12px;border-top:5px solid var(--sky);padding:10px;text-align:center;font-size:15px;line-height:1.3}
+.examples b{display:block;font-size:15.5px}
+.citymap svg{width:214px;height:176px;display:block;filter:drop-shadow(0 4px 10px rgba(0,0,0,.5))}
+.maplegend{display:flex;gap:16px;justify-content:center;color:#fff;font-size:12px;margin-top:2px}
+.maplegend span{display:flex;align-items:center;gap:5px}
+.maplegend i{display:inline-block;width:22px;border-top:3px solid #fff}
+.maplegend i.dash{border-top:2px dashed #fff}
+.exrow{position:absolute;width:263px;height:48px;background:rgba(255,255,255,.08);border-right:5px solid;border-radius:8px;padding:4px 12px;color:#fff;font-size:14.5px;line-height:1.25;display:flex;flex-direction:column;justify-content:center}
+.exrow b{font-size:15.5px}
+/* the 4 special-case shifts */
+.shift{position:absolute;width:190px;height:142px;border-radius:16px;background:rgba(0,25,48,.72);border:1.5px solid rgba(30,160,255,.7);box-shadow:0 0 18px rgba(30,160,255,.25);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;color:#fff;font-size:18px;font-weight:800}
+.shift svg{width:70px;height:70px;fill:none;stroke:#1EA0FF;stroke-width:4;stroke-linecap:round;stroke-linejoin:round;filter:drop-shadow(0 0 4px rgba(30,160,255,.55))}
+/* race track: the car approaches the finish line (left = forward) */
+.track{position:absolute;border-radius:12px;overflow:hidden;background:linear-gradient(#3b3f46,#2a2d33);border:2px solid rgba(255,255,255,.25);box-shadow:inset 0 0 20px rgba(0,0,0,.6)}
+.track::before{content:"";position:absolute;left:0;right:0;top:50%;height:3px;margin-top:-1.5px;background:repeating-linear-gradient(90deg,rgba(255,255,255,.75) 0 26px,transparent 26px 48px)}
+.track::after{content:"";position:absolute;left:0;right:0;top:0;height:6px;background:repeating-linear-gradient(90deg,#e03c31 0 22px,#fff 22px 44px)}
+.track .finish{position:absolute;left:48px;top:6px;bottom:0;width:22px;background:conic-gradient(#111 25%,#fff 0 50%,#111 0 75%,#fff 0) 0 0/11px 11px}
+.track .finish-lbl{position:absolute;left:76px;top:12px;color:#fff;font-size:12px;font-weight:800;letter-spacing:.5px;opacity:.9}
+.track .car{position:absolute;top:22px;width:150px;left:390px;transform:scaleX(-1)}
+.slide.active .track .car{animation:drive 3.2s cubic-bezier(.25,.8,.3,1) .8s both}
+@keyframes drive{from{left:560px}to{left:96px}}
+.finishline{background:conic-gradient(#111 25%,#fff 0 50%,#111 0 75%,#fff 0) 0 0/20px 20px;transform:perspective(500px) rotateX(58deg) skewX(-18deg);transform-origin:50% 100%;box-shadow:0 0 0 3px rgba(255,255,255,.6);opacity:.95}
+.racecar{transform-origin:50% 50%}
+.slide.active .racecar{animation:arrive 3s cubic-bezier(.2,.75,.25,1) .9s both}
+@keyframes arrive{0%{left:250px;top:300px;width:60px;opacity:0}10%{opacity:1}100%{left:330px;top:452px;width:270px;opacity:1}}
+
+/* choice */
+.opt{position:absolute;display:flex;align-items:center;justify-content:center;text-align:center;background:#fff;border:1px solid var(--navy);border-radius:12px;color:var(--navy);font-size:18.7px;line-height:1.25;padding:6px 14px;box-shadow:0 2px 5px rgba(0,0,0,.2);transition:all .15s}
+.opt.sm{font-size:14.7px}
+.opt:hover{background:#eaf8fe;border-color:var(--sky)}
+.opt.sel{background:var(--sky);border:2px solid var(--navy);font-weight:700}
+.check{position:absolute;height:40px;border-radius:10px;background:#fff;border:1px solid var(--navy);color:var(--navy);font-size:18.7px;font-weight:700;box-shadow:0 2px 5px rgba(0,0,0,.2);transition:opacity .2s,background .15s}
+.check:hover:not(:disabled){background:var(--sky)}
+.check:disabled{opacity:.45;cursor:default}
+
+/* feedback icon row */
+.fbi{position:absolute;text-align:center;font-size:17px;line-height:1.2;color:var(--navy)}
+.fbi img{width:37px;height:37px;margin:0 auto 4px}
+
+/* screenshots & hotspots */
+.shot{position:absolute;overflow:hidden}
+.shot>img.ss{position:absolute;left:0;top:0;width:100%;height:auto;border:1px solid #d5d5d5}
+.hs{position:absolute;cursor:pointer;border-radius:4px;border:2px solid transparent;transition:background .2s,border-color .2s}
+.hs.hit{background:rgba(178,210,52,.3);border-color:var(--green)}
+.hs.reveal{background:rgba(178,210,52,.3);border-color:var(--green);animation:blinkb 1s ease-in-out 3}
+@keyframes blinkb{50%{background:rgba(178,210,52,.55)}}
+.hs .n{position:absolute;right:4px;top:50%;width:20px;transform:translateY(-50%);display:none}
+.hs.hit .n{display:block}
+.hl{position:absolute;border:3px solid var(--orange);border-radius:6px;background:rgba(249,157,38,.15);animation:hl 1.2s ease-in-out infinite;pointer-events:none}
+@keyframes hl{0%,100%{box-shadow:0 0 0 0 rgba(249,157,38,.6)}50%{box-shadow:0 0 0 8px rgba(249,157,38,0)}}
+.agent-back{position:absolute;width:322px;z-index:5;pointer-events:none}
+.coach{position:absolute;inset:0;display:none;z-index:35;pointer-events:none}
+.coach.show{display:block;animation:fadeIn .3s ease}
+.coach img{position:absolute}
+.coach > .vx{z-index:3}
+.coach .callout{z-index:2}
+.flip{transform:scaleX(-1)}
+.scr-title{position:absolute;right:116px;top:52px;font-size:25.6px;font-weight:800;color:#fff}
+.scr-txt{position:absolute;right:66px;top:124px;width:1082px;font-size:16px;line-height:1.35;color:#111}
+.steps-list{display:flex;gap:18px;flex-wrap:wrap;font-weight:800;color:#9aa;margin-top:2px}.steps-list .cur{color:#1d9ad6}.steps-list .done{color:#7ea31a}.steps-list .done::after{content:" ✓"}.callout .cont{position:relative;display:flex;margin:8px auto 2px;height:34px;width:130px;font-size:15px;pointer-events:auto}
+
+/* dropdowns */
+.dropdown{position:absolute;background:#fff;border:1px solid #bbb;border-radius:6px;box-shadow:0 6px 18px rgba(0,0,0,.3);font-size:14px;display:none;z-index:6;overflow:hidden}
+.dropdown.show{display:block;animation:fadeIn .25s}
+.dropdown div{padding:5px 14px;border-bottom:1px solid #eee;display:flex;justify-content:space-between;gap:12px}
+.dropdown div.on{background:#e9f4fb;font-weight:700;color:#1b5ea8}
+.dropdown div.more{color:#888;font-style:italic}
+.cover{position:absolute;background:#fff;display:flex;align-items:center;justify-content:center;color:#8a96a3;font-size:17px;transition:opacity .5s}
+.cover.gone{opacity:0;pointer-events:none}
+.typed{position:absolute;background:#fff;font-size:15px;color:#222;display:flex;align-items:center;padding-right:4px;white-space:nowrap;overflow:hidden}
+.caret{display:inline-block;width:1.5px;height:15px;background:#222;margin-right:2px;animation:blink 1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+
+/* map cards */
+.mcard{position:absolute;width:264px;height:104px;cursor:pointer}
+.mcard:not(.locked):hover .ic,.mcard:not(.locked):hover .num{scale:1.12;transition:scale .15s}
+.mcard .num{position:absolute;right:14px;top:12px;width:22px}
+.mcard .ic{position:absolute;left:50%;top:12px;width:34px;transform:translateX(-50%)}
+.mcard .lbl{position:absolute;left:0;right:0;top:56px;text-align:center;font-size:17px;color:#fff}
+.mcard:not(.locked):hover .lbl{font-weight:800}
+.mcard.done .lbl{color:var(--orange)}
+.mcard.locked{cursor:default}
+.mcard.locked .lbl{color:var(--gray)}
+.mcard.locked img{filter:grayscale(1) opacity(.55)}
+@keyframes glow{0%,100%{box-shadow:0 0 6px rgba(108,207,246,.3)}50%{box-shadow:0 0 22px rgba(108,207,246,.95)}}
+
+/* drag & drop (as in "עיצוב שקף 20 בתסריט - שאלת גרירה.png") */
+.dd-num{position:absolute;width:50px;height:50px}
+.dd-slot{position:absolute;width:167px;height:122px;border:2px dashed var(--sky);border-radius:14px;background:#fff;transition:background .15s}
+.dd-slot.over{background:#d9f3fd}
+.dd-card{position:absolute;width:167px;height:122px;background:#fff;border:2.5px solid var(--sky);border-radius:14px;box-shadow:0 3px 8px rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;text-align:center;padding:10px;font-size:17px;line-height:1.25;color:var(--navy);cursor:grab;touch-action:none;transition:left .25s,top .25s,box-shadow .15s;z-index:3}
+.dd-card.dragging{transition:none;cursor:grabbing;box-shadow:0 10px 24px rgba(0,0,0,.5);z-index:25}
+.dd-card.right{background:#eef6d2;border-color:var(--green)}
+.dd-card.wrong{background:#fde8cc;border-color:var(--orange)}
+.dd-check{position:absolute;height:38px;border-radius:6px;background:var(--sky);color:var(--navy);font-size:18.7px;font-weight:700;box-shadow:0 2px 5px rgba(0,0,0,.3);transition:opacity .2s,filter .15s}
+.dd-check:hover:not(:disabled){filter:brightness(1.08)}
+.dd-check:disabled{opacity:.5;cursor:default}
+.banner{position:absolute;width:438px;height:292px}
+.banner img{width:100%;height:100%}
+.banner span{position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);text-align:center;font-size:30px;font-weight:800;color:#001930}
+
+/* lists */
+.caselist{position:absolute;list-style:none;display:grid;grid-template-columns:1fr 1fr;gap:14px 30px;margin:0;padding:0}
+.caselist li{position:relative;padding-right:34px;color:#fff;font-size:18px;line-height:1.3}
+.caselist li::before{content:"";position:absolute;right:0;top:1px;width:22px;height:22px;border-radius:50%;background:var(--orange) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M6 12.5l4 4 8-9' fill='none' stroke='%23001930' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/16px no-repeat}
+.cases{position:absolute;display:grid;grid-template-columns:1fr 1fr;gap:6px 10px}
+.cases div{background:rgba(108,207,246,.1);border:1px solid rgba(108,207,246,.55);border-right:5px solid var(--orange);border-radius:8px;color:#fff;font-size:14px;padding:5px 10px;line-height:1.2}
+.state{position:absolute;width:120px;text-align:center;color:var(--navy);font-size:15px;font-weight:700}
+.state img{width:40px;margin:0 auto 4px}
+.dots li{list-style:none;position:relative;padding-right:16px}
+.dots li::before{content:"";position:absolute;right:0;top:.55em;width:7px;height:7px;border-radius:50%;background:var(--sky)}
+.callbtn{gap:10px;padding:0 6px 0 14px}
+.callbtn .ph{flex:0 0 34px;width:34px;height:34px;border-radius:50%;background:#2fbf4f;display:flex;align-items:center;justify-content:center;animation:ringp 1.4s infinite}
+.callbtn .ph svg{width:19px;height:19px;animation:shake 1.4s infinite}
+@keyframes ringp{0%{box-shadow:0 0 0 0 rgba(47,191,79,.7)}70%{box-shadow:0 0 0 14px rgba(47,191,79,0)}100%{box-shadow:0 0 0 0 rgba(47,191,79,0)}}
+@keyframes shake{0%,50%,100%{transform:rotate(0)}10%,30%{transform:rotate(-14deg)}20%,40%{transform:rotate(14deg)}}
+.toast{position:absolute;left:330px;top:250px;width:540px;padding:26px;background:#fff;border:1px solid var(--navy);border-radius:20px;text-align:center;box-shadow:0 10px 30px rgba(0,0,0,.5)}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute">
+  <defs>
+    <symbol id="arrowL" viewBox="0 0 24 24"><path d="M19.5 12H5.5M11.5 5.5L5 12l6.5 6.5" fill="none" stroke="#001930" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="arrowR" viewBox="0 0 24 24"><path d="M4.5 12h14M12.5 5.5L19 12l-6.5 6.5" fill="none" stroke="#001930" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  </defs>
+</svg>
+<div id="stage">
+
+<!-- ======================= MASTER ======================= -->
+<div id="master">
+  <div class="hdr">
+    <img class="logo" src="assets/logo-jlm.png" alt="עיריית ירושלים">
+    <div class="menu" id="menu"><span>מבוא</span><span>מקבלים תמונת מצב</span><span>מכוונים למסלול הנכון</span><span>מגיבים למצבים מיוחדים</span><span>חוצים את קו הסיום</span></div>
+    <button id="sound" aria-label="השתקה / הפעלת צלילים">
+      <svg class="on" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H3v6h3l5 4z" fill="#fff"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/></svg>
+      <svg class="off" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H3v6h3l5 4z" fill="#fff"/><path d="m16 9 6 6M22 9l-6 6"/></svg>
+    </button>
+  </div>
+</div>
+
+<!-- ======================= 01 פתיח ======================= -->
+<section class="slide" id="s01" data-title="פתיח" data-master="0" data-chapter="0">
+  <!-- סרטון פתיח (פתיח.mp4) – מתנגן פעם אחת ונעצר על הפריים האחרון; הכותרת והכפתור נכנסים באנימציה -->
+  <video class="a bg" id="v01" src="assets/opening.mp4" poster="assets/bg-opening.jpg" muted playsinline preload="auto" style="left:0;top:0;width:1200px;height:676px;object-fit:cover"></video>
+  <div class="a bg" style="left:0;top:0;width:1200px;height:676px;background:linear-gradient(to right,rgba(255,255,255,.35),rgba(255,255,255,0) 45%)"></div>
+  <img class="a" data-anim="dropin" data-delay="1.2" src="assets/title.png" style="left:177px;top:117px;width:909px" alt="מנהלים את המרוץ מהמוקד העירוני">
+  <div class="a" data-anim="slidein" data-delay=".3" style="left:-74px;top:21px;width:330px;height:220px;background:#fff;border-radius:0 110px 110px 0;box-shadow:0 3px 10px rgba(0,0,0,.3)"></div>
+  <img class="a" data-anim="slidein" data-delay=".45" src="assets/speedo-open.png" style="left:44px;top:30px;width:127px" alt="מ-0 ל-106 תחנות">
+  <img class="a" data-anim="slidein" data-delay=".55" src="assets/logo-106.png" style="left:49px;top:152px;width:128px" alt="106 המוקד העירוני">
+  <img class="a" data-delay=".3" src="assets/logo-jlm.png" style="left:1084px;top:8px;width:141px" alt="עיריית ירושלים">
+  <button class="btn pulse" data-act="next" data-delay="2" style="left:509px;top:572px;width:183px;height:48px;font-size:18.7px">יוצאים למסלול</button>
+</section>
+
+<!-- ======================= 02 המנוע של המרוץ ======================= -->
+<section class="slide" id="s02" data-title="המנוע של המרוץ" data-chapter="0">
+  <!-- מאיה עומדת ומסבירה, הטקסט על המסך הגדול -->
+  <img class="a bg" src="assets/bg-chapter1.jpg" style="left:-120px;top:32px;width:1310px;height:714px" alt="">
+  <div class="a f16 w" style="left:600px;top:98px;width:540px;font-weight:800">המנוע של המרוץ</div>
+  <div class="a w lh" style="left:600px;top:130px;width:540px;font-size:14.7px">
+    <p>במירוץ זה תלמדו על תהליך העבודה במוקד העירוני, משלב קבלת הפנייה ועד להעברת הטיפול לגורם המתאים, כך שבזמן אמת אתם תדעו לתת את המענה המקצועי ביותר. לאורך המירוץ תפגשו מצבים מהעבודה היומיומית במוקד, תענו על שאלות, תקבלו החלטות ותתנסו בפעולות במערכת.</p>
+    <p style="margin-top:8px">לפני שמתחילים, <b>כמה דברים שכדאי להכיר:</b></p>
+    <ul class="dots" style="margin-top:4px">
+      <li>ניתן להתקדם קדימה ולחזור אחורה באמצעות <b class="sky">כפתורי הניווט בתחתית המסך.</b></li>
+      <li><b class="sky">סרגל ההתקדמות העליון</b> יציג בכל שלב באיזה פרק אתם נמצאים וכמה מהלומדה כבר השלמתם.</li>
+      <li><b class="sky">במהלך הלומדה יופיעו שאלות ותרגולים</b> שיעזרו לכם ליישם את הידע הנלמד. בחלק מהמסכים תתבקשו ללחוץ על אזורים שונים במסך, לבחור תשובות או לקבל החלטות כפי שנעשה בעבודה במוקד.</li>
+    </ul>
+  </div>
+  <button class="btn pulse" data-act="next" style="left:15px;top:607px;width:266px;height:48px">מוכנים לצאת לדרך? לחצו כאן</button>
+</section>
+
+<!-- ======================= 03 ניתוב הפניות ======================= -->
+<section class="slide" id="s03" data-title="ניתוב הפניות למסלולים המתאימים" data-chapter="0">
+  <!-- מאיה עומדת ומסתכלת על המסך הגדול -->
+  <img class="a bg" src="assets/bg-question.jpg" style="left:0;top:46px;width:1200px;height:641px" alt="">
+  <div class="a w" style="left:430px;top:76px;width:725px;font-size:23px;font-weight:800">ניתוב הפניות למסלולים המתאימים</div>
+  <div class="a w lh" style="left:430px;top:118px;width:725px;font-size:17px">
+    <p>בכל יום מתקבלות במוקד העירוני פניות מתושבים מכל רחבי העיר. מאחורי כל פנייה נגלה: מה קרה, היכן התרחש האירוע, מה היקפו ומי הגורם המתאים לטיפול.</p>
+    <p style="margin-top:12px"><b class="sky">כמנהלי המרוץ העירוני,</b> תפקידכם הוא להקשיב, לאסוף את המידע הנדרש ולוודא שהפנייה נכנסת למסלול הטיפול הנכון. אתם מנתבים את התהליך, וכל פעולה שתבצעו תשפיע על המשך הטיפול בפנייה.</p>
+    <p style="margin-top:12px">במהלך המירוץ נעקוב אחר מסלול העבודה במוקד – מקבלת הפנייה, דרך איסוף המידע והשלמת תמונת המצב, ועד להעברת הפנייה לגורם המתאים להמשך טיפול.</p>
+  </div>
+</section>
+
+<!-- ======================= 04 בסיום המירוץ תוכלו ======================= -->
+<section class="slide" id="s04" data-title="בסיום המירוץ תוכלו" data-chapter="0">
+  <img class="a bg" src="assets/bg-content.jpg" style="left:0;top:46px;width:1204px;height:685px" alt="">
+  <div class="a f16 w" style="left:579px;top:96px;width:556px;font-weight:800">בסיום המירוץ תוכלו:</div>
+  <img class="a" src="assets/obj-1.png" style="left:1078px;top:154px;width:49px" alt="">
+  <div class="a f128 w" style="left:860px;top:166px;width:210px">לקלוט פנייה בצורה נכונה</div>
+  <img class="a" src="assets/obj-3.png" style="left:1078px;top:225px;width:49px" alt="">
+  <div class="a f128 w" style="left:810px;top:237px;width:260px">לזהות מיקום בצורה מדויקת</div>
+  <img class="a" src="assets/obj-5.png" style="left:1078px;top:305px;width:49px" alt="">
+  <div class="a f128 w" style="left:778px;top:317px;width:292px">לזהות מקרים המחייבים טיפול מיידי</div>
+  <img class="a" src="assets/obj-2.png" style="left:729px;top:154px;width:49px" alt="">
+  <div class="a f128 w" style="left:423px;top:166px;width:298px">לאסוף את המידע הנדרש מהתושב</div>
+  <img class="a" src="assets/obj-4.png" style="left:729px;top:225px;width:49px" alt="">
+  <div class="a f128 w lh" style="left:505px;top:230px;width:216px">לזהות את הגורם המתאים ולהעביר אליו את הפנייה</div>
+  <button class="btn" data-act="next" style="left:380px;top:376px;width:185px;height:48px">צפו במפת המירוץ</button>
+</section>
+
+<!-- ======================= 05 מפת המרוץ ======================= -->
+<section class="slide map" id="s05" data-title="מפת המרוץ העירוני" data-chapter="0" data-done="0"></section>
+
+<!-- ======================= 06 מקבלים תמונת מצב – פתיחת פרק ======================= -->
+<section class="slide" id="s06" data-title="מקבלים תמונת מצב" data-chapter="1">
+  <!-- סרטון שקף 5 (שקף 5.mp4) – הטקסט עולה קודם, ואחריו הסרטון מתנגן (data-start = השהיה בשניות) -->
+  <video class="a bg" id="v06" data-start="2.2" src="assets/chapter1.mp4" poster="assets/bg-chapter1.jpg" muted playsinline preload="auto" style="left:0;top:45px;width:1200px;height:653px;object-fit:cover"></video>
+  <div class="a f16 w" style="left:587px;top:110px;width:556px;font-weight:800">מקבלים תמונת מצב</div>
+  <div class="a f128 w lh" style="left:587px;top:152px;width:556px">
+    <p>כל מרוץ מתחיל בהיכרות מדויקת עם מה שקורה על המסלול.</p>
+    <p style="margin-top:6px">בפרק זה תלמדו כיצד לקבל את הפנייה, לשאול את השאלות הנכונות, ולאסוף את המידע החיוני לפני שמזניקים את הגורם המטפל.</p>
+    <p style="margin-top:14px;font-weight:800">כעת מתקבלת שיחה חדשה במוקד.</p>
+  </div>
+  <button class="btn pulse callbtn" data-act="next" data-delay="1" style="left:916px;top:326px;width:227px;height:50px">
+    <span class="ph"><svg viewBox="0 0 24 24" fill="#fff"><path d="M6.6 10.8a15.1 15.1 0 0 0 6.6 6.6l2.2-2.2a1 1 0 0 1 1-.25 11.4 11.4 0 0 0 3.6.57 1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.45.57 3.57a1 1 0 0 1-.25 1z"/></svg></span>
+    לחצו לקבלת השיחה
+  </button>
+</section>
+
+<!-- ======================= 07 אפשר כבר להזניק? (שאלת בחירה + משוב) ======================= -->
+<section class="slide choice" id="s07" data-title="אפשר כבר להזניק את הטיפול?" data-chapter="1" data-gate="1">
+  <img class="a bg" src="assets/bg-call.jpg" style="left:-6px;top:45px;width:1206px;height:633px" alt="">
+  <div class="callout tr f128 lh" style="left:645px;top:176px;width:375px;min-height:85px"><b>מוקדנית:</b><br>"מוקד שלום, מדברת מאיה, במה אוכל לעזור?"</div>
+  <div class="callout tl f128 lh" style="left:177px;top:176px;width:375px;min-height:85px"><b>תושב:</b><br>"יש עץ שנפל וחוסם את המדרכה ליד בית הספר."</div>
+  <div class="card" style="left:105px;top:418px;width:990px;height:296px"></div>
+  <div class="a f128 c" style="left:92px;top:445px;width:1008px;font-weight:800">האם יש לנו תמונת מצב מספקת כדי להזניק את הטיפול?</div>
+  <button class="opt" style="left:612px;top:488px;width:300px;height:64px">כן, אפשר להעביר</button>
+  <button class="opt" data-correct="1" style="left:288px;top:488px;width:300px;height:64px">לא, חסר מידע</button>
+  <button class="check" disabled style="left:288px;top:572px;width:140px">בדיקה</button>
+
+  <div class="layer inline" data-layer="fb-ok">
+    <div class="card" style="left:150px;top:296px;width:900px;height:332px"></div>
+    <div class="a fbrow" style="left:105px;top:316px;width:990px"><img class="vx" src="assets/v.png" alt=""><b class="grn" style="font-size:24px">נכון מאוד!</b><b style="font-size:19px">עדיין חסרים פרטים לפני שממשיכים במסלול!</b></div>
+    <div class="a c" style="left:105px;top:366px;width:990px;font-size:16px">אנחנו יודעים שיש עץ שנפל, אבל עדיין חסר מידע שיסייע להבין את התמונה המלאה:</div>
+    <div class="a fbchips" style="left:105px;top:396px;width:990px">
+      <span><img src="assets/ic-pin-g.png" alt="">המיקום המדויק</span><span><img src="assets/ic-expand-g.png" alt="">היקף המפגע</span><span><img src="assets/ic-park-g.png" alt="">האם מדובר בשטח ציבורי או פרטי</span><span><img src="assets/ic-chat-g.png" alt="">אופן הטיפול הנדרש</span>
+    </div>
+    <div class="a c lh" style="left:125px;top:450px;width:950px;font-size:16px">אבל תחילה נבקש מהתושב את פרטיו האישיים: <b>שם וטלפון.</b><br>ניתן לקבל גם <b>דיווח אנונימי</b> באמצעות סימון האפשרות המתאימה.</div>
+    <div class="a fbrow" style="left:105px;top:506px;width:990px;font-size:16px"><img src="assets/ic-love-g.png" style="width:26px;height:26px" alt=""><b class="grn">חשוב לזכור:</b><span>כאשר הדיווח אנונימי, לא ניתן יהיה לחזור לפונה לצורך השלמת מידע או עדכון בהמשך הטיפול.</span></div>
+    <button class="btn" data-act="next" style="left:495px;top:560px;width:210px;height:46px">בואו נתרגל את המסלול</button>
+  </div>
+  <div class="layer inline" data-layer="fb-bad">
+    <div class="card" style="left:150px;top:296px;width:900px;height:332px"></div>
+    <div class="a fbrow" style="left:105px;top:316px;width:990px"><img class="vx" src="assets/x.png" alt=""><b class="org" style="font-size:24px">לא נכון…</b><b style="font-size:19px">עדיין חסרים פרטים לפני שממשיכים במסלול!</b></div>
+    <div class="a c" style="left:105px;top:366px;width:990px;font-size:16px">אנחנו יודעים שיש עץ שנפל, אבל עדיין חסר מידע שיסייע להבין את התמונה המלאה:</div>
+    <div class="a fbchips" style="left:105px;top:396px;width:990px">
+      <span><img src="assets/ic-pin-o.png" alt="">המיקום המדויק</span><span><img src="assets/ic-expand-o.png" alt="">היקף המפגע</span><span><img src="assets/ic-park-o.png" alt="">האם מדובר בשטח ציבורי או פרטי</span><span><img src="assets/ic-chat-o.png" alt="">אופן הטיפול הנדרש</span>
+    </div>
+    <div class="a c lh" style="left:125px;top:450px;width:950px;font-size:16px">אבל תחילה נבקש מהתושב את פרטיו האישיים: <b>שם וטלפון.</b><br>ניתן לקבל גם <b>דיווח אנונימי</b> באמצעות סימון האפשרות המתאימה.</div>
+    <div class="a fbrow" style="left:105px;top:506px;width:990px;font-size:16px"><img src="assets/ic-love-o.png" style="width:26px;height:26px" alt=""><b class="org">חשוב לזכור:</b><span>כאשר הדיווח אנונימי, לא ניתן יהיה לחזור לפונה לצורך השלמת מידע או עדכון בהמשך הטיפול.</span></div>
+    <button class="btn" data-act="next" style="left:495px;top:560px;width:210px;height:46px">ממשיכים</button>
+  </div>
+</section>
+
+<!-- ======================= 08 פרטי התושב (צילום מסך – לפי "שקף צילום מסך.png") ======================= -->
+<section class="slide screen" id="s08" data-title="אוספים נתונים מהמסלול – פרטי התושב" data-chapter="1" data-gate="1">
+  <img class="a bg" src="assets/bg-screen-full.jpg" style="left:0;top:44px;width:1200px;height:675px" alt="">
+  <div class="scr-title" style="top:56px">אוספים נתונים מהמסלול</div>
+  <div class="a" style="right:116px;top:100px;font-size:16px;color:#111">לחצו במסך על אזור השדות בהן ממלאים את <b>פרטי התושב</b></div>
+  <div class="shot" style="left:122px;top:136px;width:968px;height:338px">
+    <img class="ss" src="assets/ss-08.png" alt="טופס פנייה ריק">
+    <div class="hs" data-step="1" style="left:51.2%;top:3.4%;width:48.6%;height:23.5%"></div>
+  </div>
+  <img class="agent-back" src="assets/agent-back.png" style="left:118px;top:392px" alt="">
+  <div class="coach" data-coach="ok"><img src="assets/agent-thumbs.png" style="left:51px;top:360px;width:432px" alt=""><div class="callout tl f14" style="left:357px;top:326px;width:202px"><b class="grn">מעולה!</b><br>זיהיתם את השדות הנכונים<button class="btn cont">ממשיכים</button><img class="vx" src="assets/v.png" alt=""></div></div>
+  <div class="coach" data-coach="retry"><img src="assets/agent-confused.png" style="left:93px;top:392px;width:243px" alt=""><div class="callout tl f14" style="left:357px;top:350px;width:256px"><b class="org">בחרתם בשדה לא נכון</b><br>נסו שוב…<img class="vx" src="assets/x.png" alt=""></div></div>
+  <div class="coach" data-coach="bad"><img src="assets/agent-confused.png" style="left:93px;top:392px;width:243px" alt=""><div class="callout tl f14" style="left:357px;top:326px;width:249px"><b class="org">בחרתם בשדות לא נכונים</b><br>לפניכם השדות הנכונים<button class="btn cont">ממשיכים</button><img class="vx" src="assets/x.png" alt=""></div></div>
+</section>
+
+<!-- ======================= 09 איזו שאלה תסייע? ======================= -->
+<section class="slide choice" id="s09" data-title="אוספים נתונים מהמסלול – שאלה משלימה" data-chapter="1">
+  <!-- עיצוב "סיפור מקרה": התושב והמוקדנית, השאלה בחלק הלבן והמשוב בתוכו -->
+  <img class="a bg" src="assets/bg-case.jpg" style="left:-3px;top:45px;width:1206px;height:630px" alt="">
+  <div class="callout tl f128 lh" style="left:177px;top:150px;width:390px;min-height:85px"><b>התושב דיווח:</b><br>"יש עץ שנפל וחוסם את המדרכה ליד בית הספר."</div>
+  <div class="card" style="left:105px;top:418px;width:990px;height:296px"></div>
+  <div class="a f128 c" style="left:92px;top:436px;width:1008px;font-weight:800">איזו שאלה תסייע לכם להשלים את התמונה?</div>
+  <button class="opt sm" data-correct="1" style="left:612px;top:476px;width:320px;height:84px">"באיזה בית ספר מדובר?<br>והאם המעבר חסום באופן מלא או חלקי?"</button>
+  <button class="opt sm" style="left:268px;top:476px;width:320px;height:84px">"מתי שמת לב לזה בפעם הראשונה?"</button>
+  <button class="check" disabled style="left:268px;top:580px;width:140px">בדיקה</button>
+  <div class="layer inline" data-layer="fb-ok">
+    <div class="card" style="left:180px;top:352px;width:840px;height:222px"></div>
+    <div class="a fbrow" style="left:180px;top:368px;width:840px"><img class="vx" src="assets/v.png" alt=""><b class="grn" style="font-size:24px">נכון מאוד!</b><b style="font-size:19px">קיבלנו נתונים חשובים מהמסלול.</b></div>
+    <div class="a c lh" style="left:220px;top:420px;width:760px;font-size:16px">השאלה מסייעת לזהות גם את <b>מיקום המפגע</b> וגם את <b>היקף החסימה</b>.<br>ככל שתמונת המצב מדויקת יותר, כך יהיה קל יותר לכוון את הפנייה לגורם המתאים.</div>
+    <button class="btn" data-act="next" style="left:480px;top:506px;width:240px;height:44px">בואו נמשיך לבחון את המסלול</button>
+  </div>
+  <div class="layer inline" data-layer="fb-bad">
+    <div class="card" style="left:180px;top:352px;width:840px;height:222px"></div>
+    <div class="a fbrow" style="left:180px;top:368px;width:840px"><img class="vx" src="assets/x.png" alt=""><b class="org" style="font-size:24px">לא מדויק…</b><b style="font-size:19px">עדיין חסרים לנו נתוני מפתח.</b></div>
+    <div class="a c lh" style="left:220px;top:420px;width:760px;font-size:16px">המידע עשוי להיות רלוונטי בהמשך, אך בשלב זה עלינו לזהות קודם את <b>המיקום המדויק</b> ואת <b>היקף המפגע</b>.</div>
+    <button class="btn" data-act="next" style="left:480px;top:506px;width:240px;height:44px">ממשיכים</button>
+  </div>
+</section>
+
+<!-- ======================= 10 כתובת המפגע ======================= -->
+<section class="slide screen" id="s10" data-title="אוספים נתונים מהמסלול – כתובת" data-chapter="1" data-gate="1">
+  <img class="a bg" src="assets/bg-screen.jpg" style="left:0;top:45px;width:1200px;height:630px" alt="">
+  <div class="scr-title">אוספים נתונים מהמסלול</div>
+  <div class="scr-txt">
+    <p><b>תשובת התושב:</b> "מדובר בבית ספר נופים, ברחוב שדרות הרצל 137. המעבר כמעט חסום לגמרי."</p>
+    <p style="margin-top:10px"><b>קיבלנו מידע מהותי!</b> <img src="assets/ic-love-g.png" alt="" style="display:inline-block;width:26px;vertical-align:middle"></p>
+    <p>כתובת המפגע חשובה לנו כדי לדייק את הגורם המטפל שנשלח לטיפול באירוע המדווח.</p>
+    <p style="margin-top:10px;font-weight:800">לחצו במסך על אזור השדות של הכתובת להמשך</p>
+  </div>
+  <div class="shot" style="left:37px;top:285px;width:1096px;height:363px">
+    <img class="ss" src="assets/ss-10.jpg" alt="טופס פנייה עם פרטי תושב">
+    <div class="hs" data-step="1" style="left:51%;top:40.7%;width:48.8%;height:21.6%"></div>
+  </div>
+  <img class="agent-back" src="assets/agent-back.png" style="left:78px;top:392px" alt="">
+  <div class="coach" data-coach="ok"><img src="assets/agent-thumbs.png" style="left:51px;top:360px;width:432px" alt=""><div class="callout tl f14" style="left:357px;top:326px;width:202px"><b class="grn">מעולה!</b><br>זיהיתם את שדות הכתובת<button class="btn cont">ממשיכים</button><img class="vx" src="assets/v.png" alt=""></div></div>
+  <div class="coach" data-coach="retry"><img src="assets/agent-confused.png" style="left:93px;top:392px;width:243px" alt=""><div class="callout tl f14" style="left:357px;top:350px;width:256px"><b class="org">בחרתם בשדות לא נכונים</b><br>נסו שוב…<img class="vx" src="assets/x.png" alt=""></div></div>
+  <div class="coach" data-coach="bad"><img src="assets/agent-confused.png" style="left:93px;top:392px;width:243px" alt=""><div class="callout tl f14" style="left:357px;top:326px;width:229px"><b class="org">לא נכון…</b><br>לפניכם השדות הנכונים<button class="btn cont">ממשיכים</button><img class="vx" src="assets/x.png" alt=""></div></div>
+</section>
+
+<!-- ======================= 11 נושא, תיאור וסטטוס – שקף אחד, 3 אזורים לפי הסדר (שקף 11 בתסריט) ======================= -->
+<!-- כל לחיצה נכונה: משוב בבועה + כפתור "לשדה הבא" בתוך הבועה; אחרי השלב השלישי: "ממשיכים" עובר לשקף 12 -->
+<section class="slide screen steps" id="s11" data-title="אוספים נתונים מהמסלול – נושא, תיאור וסטטוס" data-chapter="1" data-nonext="1">
+  <img class="a bg" src="assets/bg-screen.jpg" style="left:0;top:45px;width:1200px;height:630px" alt="">
+  <div class="scr-title">אוספים נתונים מהמסלול</div>
+  <div class="scr-txt">
+    <p><b>כעת עלינו למלא את נושא הפנייה ואת תיאור הפנייה.</b></p>
+    <p style="margin-top:6px">לחצו במסך על השדות לפי הסדר הנכון:</p>
+    <div class="steps-list"><span data-s="1" class="cur">1. נושא הפנייה</span><span data-s="2">2. תיאור הפנייה</span><span data-s="3">3. לאחר שהפנייה עברה לגורם המטפל, לחצו על סטטוס "בטיפול"</span></div>
+  </div>
+  <div class="shot" style="left:37px;top:285px;width:1096px;height:363px">
+    <img class="ss" id="s11img" src="assets/ss-10.jpg" alt="טופס פנייה">
+    <div class="hs" data-step="1" data-msg="זה שדה נושא הפנייה." data-btn="לשדה הבא" style="left:51%;top:33%;width:48.8%;height:7.4%"><img class="n" src="assets/num-1.png" alt="1"></div>
+    <div class="hs" data-step="2" data-msg="זה שדה תיאור הפנייה." data-btn="לשדה הבא" style="left:51%;top:62.8%;width:48.8%;height:10.9%"><img class="n" src="assets/num-2.png" alt="2"></div>
+    <div class="hs" data-step="3" data-msg="הסטטוס עודכן ל&quot;בטיפול&quot;." data-btn="ממשיכים" style="left:51%;top:74.8%;width:48.8%;height:7.1%"><img class="n" src="assets/num-3.png" alt="3"></div>
+    <div class="dropdown" id="s11dd" style="left:52%;top:82%;width:26%"><div>חדש</div><div class="on">בטיפול <span>✓</span></div></div>
+  </div>
+  <img class="agent-back" src="assets/agent-back.png" style="left:78px;top:392px" alt="">
+  <div class="coach" data-coach="ok"><img src="assets/agent-thumbs.png" style="left:51px;top:360px;width:432px" alt=""><div class="callout tl f14" style="left:357px;top:300px;width:220px"><b class="grn">מעולה!</b><br><span class="okmsg"></span><button class="btn cont">לשדה הבא</button><img class="vx" src="assets/v.png" alt=""></div></div>
+  <div class="coach" data-coach="retry"><img src="assets/agent-confused.png" style="left:93px;top:392px;width:243px" alt=""><div class="callout tl f14" style="left:357px;top:350px;width:256px"><b class="org">בחרתם בשדה לא נכון</b><br>נסו שוב…<img class="vx" src="assets/x.png" alt=""></div></div>
+  <div class="coach" data-coach="bad"><img src="assets/agent-confused.png" style="left:93px;top:392px;width:243px" alt=""><div class="callout tl f14" style="left:357px;top:326px;width:229px"><b class="org">לא נכון…</b><br>לפניכם השדה הנכון<button class="btn cont">ממשיכים</button><img class="vx" src="assets/x.png" alt=""></div></div>
+</section>
+
+<!-- ======================= 12 נקודת בקרה – זיהוי אוטומטי (שקף 12 בתסריט) – שקף רגיל, מאיה מפנה את תשומת הלב ======================= -->
+<section class="slide" id="s12" data-title="נקודת בקרה – זיהוי אוטומטי של אגף ומחלקה" data-chapter="1">
+  <img class="a bg" src="assets/bg-point.jpg" style="left:0;top:46px;width:1200px;height:654px" alt="">
+  <div class="a" style="left:587px;top:104px;width:556px;display:flex;align-items:center;gap:10px;justify-content:flex-start">
+    <span style="flex:0 0 34px;height:34px;border-radius:50%;background:var(--orange);display:flex;align-items:center;justify-content:center"><img src="assets/ic-warning.png" style="width:20px" alt=""></span>
+    <span class="f16 org" style="font-weight:800">שימו לב לנקודת הבקרה הבאה!</span>
+  </div>
+  <div class="a w" style="left:587px;top:146px;width:556px;font-size:16px;line-height:1.35">לאחר מילוי נושא הפנייה ותיאור הפנייה, <b class="sky">המערכת מזהה באופן אוטומטי את המסלול הנכון</b> לטיפול מתאים ומדויק, ומציגה את <b class="sky">האגף והמחלקה</b> הרלוונטיים.</div>
+  <div class="a" data-anim="popin" data-delay=".6" style="left:672px;top:206px;width:380px;height:163px">
+    <img src="assets/ss-12.jpg" style="width:380px;border-radius:6px;box-shadow:0 4px 14px rgba(0,0,0,.5)" alt="אגף ומחלקה מזוהים אוטומטית">
+    <div class="hl" style="left:-3px;top:38%;width:384px;height:29%"></div>
+  </div>
+  <button class="btn pulse" data-act="next" style="left:15px;top:607px;width:185px;height:48px">ממשיכים במסלול</button>
+</section>
+
+<!-- ======================= 13א מסווגים את הפנייה – מאיה מסבירה בבועת דיבור (שקף 13 בתסריט, חלק ההסבר) ======================= -->
+<section class="slide" id="s13a" data-title="מסווגים את הפנייה לתנאי המסלול – הסבר" data-chapter="1">
+  <img class="a bg" src="assets/bg-stand.jpg" style="left:0;top:46px;width:1200px;height:654px" alt="">
+  <div class="a f16 w" style="left:600px;top:104px;width:545px;font-weight:800">מסווגים את הפנייה לתנאי המסלול</div>
+  <div class="a w lh" style="left:600px;top:140px;width:545px;font-size:15.5px">
+    <p>לאחר השלמת פרטי הפנייה, חשוב לבדוק גם את <b class="sky">תגית הפנייה</b>. ברירת המחדל במערכת היא: <b class="sky">רגיל</b>.</p>
+    <p style="margin-top:8px">כאשר תנאי השגרה משתנים, יש לבחור את התגית המתאימה למצב שבו התקבלה הפנייה, למשל:</p>
+    <div class="chips dark"><span>רגיל <small>(ברירת מחדל)</small></span><span>סערה</span><span>חרבות ברזל</span><span>ועוד…</span></div>
+    <p style="margin-top:10px">בחירת התגית מסייעת למערכת לשייך את הפנייה למצב הפעילות הנכון ולהתאים את המשך הטיפול.</p>
+  </div>
+  <button class="btn pulse" data-act="next" style="left:15px;top:607px;width:185px;height:48px">לתרגול במערכת</button>
+</section>
+
+<!-- ======================= 13 תגית הפנייה – תרגול ======================= -->
+<section class="slide screen" id="s13" data-title="מסווגים את הפנייה לתנאי המסלול – תרגול" data-chapter="1" data-okfn="s13Done">
+  <img class="a bg" src="assets/bg-screen.jpg" style="left:0;top:45px;width:1200px;height:630px" alt="">
+  <div class="scr-title">מסווגים את הפנייה לתנאי המסלול</div>
+  <div class="scr-txt"><p>לחצו על שדה <b>תגית הפנייה</b> והכירו את האפשרויות</p></div>
+  <div class="shot" style="left:37px;top:175px;width:1096px;height:357px">
+    <img class="ss" src="assets/ss-13.jpg" alt="טופס פנייה מלא">
+    <div class="hs" data-step="1" style="left:1.2%;top:57.3%;width:49%;height:7.2%"></div>
+    <div class="dropdown" id="s13dd" style="left:2%;top:65%;width:36%"><div class="on">רגיל <span>✓ ברירת מחדל</span></div><div>סערה</div><div>חרבות ברזל</div><div class="more">ועוד...</div></div>
+  </div>
+  <img class="agent-back flip" src="assets/agent-back.png" style="left:800px;top:392px" alt="">
+  <div class="coach" data-coach="ok"><img class="flip" src="assets/agent-thumbs.png" style="left:717px;top:360px;width:432px" alt=""><div class="callout tr f14" style="left:480px;top:250px;width:250px"><b class="grn">מעולה!</b><br>משנים את התגית רק כשתנאי השגרה משתנים<button class="btn cont">ממשיכים</button><img class="vx" src="assets/v.png" alt=""></div></div>
+  <div class="coach" data-coach="retry"><img class="flip" src="assets/agent-confused.png" style="left:864px;top:392px;width:243px" alt=""><div class="callout tr f14" style="left:520px;top:300px;width:256px"><b class="org">בחרתם בשדה לא נכון</b><br>נסו שוב…<img class="vx" src="assets/x.png" alt=""></div></div>
+  <div class="coach" data-coach="bad"><img class="flip" src="assets/agent-confused.png" style="left:864px;top:392px;width:243px" alt=""><div class="callout tr f14" style="left:520px;top:280px;width:229px"><b class="org">לא נכון…</b><br>לפניכם השדה הנכון<button class="btn cont">ממשיכים</button><img class="vx" src="assets/x.png" alt=""></div></div>
+</section>
+
+<!-- ======================= 14 שומרים את התושב בתמונה ======================= -->
+<section class="slide choice" id="s14" data-title="שומרים את התושב בתמונה" data-chapter="1">
+  <img class="a bg" src="assets/bg-case.jpg" style="left:-3px;top:45px;width:1206px;height:630px" alt="">
+  <div class="callout tl f128 lh" style="left:177px;top:150px;width:390px;min-height:70px"><b>התושב ממתין על הקו…</b><br>הזנת המידע למערכת אורכת זמן.</div>
+  <div class="card" style="left:105px;top:380px;width:990px;height:334px"></div>
+  <div class="a c" style="left:105px;top:394px;width:990px;font-size:16px">קיבלתם את כל פרטי הדיווח, אך הזנת המידע למערכת אורכת זמן.</div>
+  <div class="a f128 c" style="left:105px;top:420px;width:990px;font-weight:800">כיצד נכון לפעול בזמן שאתם משלימים את התיעוד?</div>
+  <button class="opt sm" data-correct="1" style="left:612px;top:458px;width:420px;height:100px">לעדכן את התושב במה שאתם עושים, למשל: "עכשיו אני מזין את תיאור הפנייה, את הכתובת שמסרת ובודק איזה אגף מטפל בנושא."</button>
+  <button class="opt sm" style="left:168px;top:458px;width:420px;height:100px">להמשיך להקליד בשקט עד לסיום הזנת כל הפרטים.</button>
+  <button class="check" disabled style="left:168px;top:576px;width:140px">בדיקה</button>
+  <div class="layer inline" data-layer="fb-ok">
+    <div class="card" style="left:180px;top:352px;width:840px;height:222px"></div>
+    <div class="a fbrow" style="left:180px;top:368px;width:840px"><img class="vx" src="assets/v.png" alt=""><b class="grn" style="font-size:24px">נכון!</b><b style="font-size:19px">שומרים על קשר גם בעמדת הבקרה.</b></div>
+    <div class="a c lh" style="left:220px;top:420px;width:760px;font-size:16px">גם בזמן עצירה בעמדת הבקרה, חשוב לשמור על קשר עם התושב. שיתוף קצר במה שאתם עושים <b>מונע תחושת המתנה וחוסר ודאות</b>, ומבהיר לתושב שהפנייה ממשיכה להתקדם במסלול הטיפול.</div>
+    <button class="btn" data-act="next" style="left:480px;top:506px;width:240px;height:44px">ממשיכים לתרגל את המסלול</button>
+  </div>
+  <div class="layer inline" data-layer="fb-bad">
+    <div class="card" style="left:180px;top:352px;width:840px;height:222px"></div>
+    <div class="a fbrow" style="left:180px;top:368px;width:840px"><img class="vx" src="assets/x.png" alt=""><b class="org" style="font-size:24px">לא מדויק…</b><b style="font-size:19px">שתיקה ממושכת עלולה לגרום לתושב לחשוב שהשיחה נתקעה.</b></div>
+    <div class="a c lh" style="left:220px;top:420px;width:760px;font-size:16px">כאשר הזנת המידע אורכת זמן, חשוב <b>להסביר בקצרה מה אתם עושים</b> ולשמור את התושב מעודכן.</div>
+    <button class="btn" data-act="next" style="left:480px;top:506px;width:240px;height:44px">ממשיכים</button>
+  </div>
+</section>
+
+<!-- ======================= 15 מפת המרוץ (2) ======================= -->
+<section class="slide map" id="s15" data-title="מפת המרוץ העירוני (2)" data-chapter="2" data-done="1"></section>
+
+<!-- ======================= 16 מכוונים למסלול הנכון – פתיחת פרק (לפי "תוכן.png") ======================= -->
+<section class="slide" id="s16" data-title="מכוונים למסלול הנכון" data-chapter="2">
+  <img class="a bg" src="assets/bg-chapter2.jpg" style="left:0;top:45px;width:1200px;height:634px" alt="">
+  <div class="a" style="left:275px;top:60px;width:543px;font-size:21.3px;line-height:1.3"><div class="sky" style="font-weight:800">מכוונים למסלול הנכון</div><div class="w">העברת הדיווח לגורם המטפל</div></div>
+  <div class="a w" style="left:312px;top:152px;width:517px;font-size:16px;line-height:1.35">
+    <p>סיימתם לאסוף את פרטי הדיווח, וכעת תמונת המצב מלאה: אתם יודעים מה קרה, היכן נמצא האירוע ומה היקפו, והמערכת כבר מציגה את האגף והמחלקה האחראים לטיפול.</p>
+    <p style="margin-top:21px">עכשיו הגיע הזמן לדייק את מסלול הפנייה ולוודא שהיא מגיעה לגורם הנכון,</p>
+    <p class="sky" style="font-weight:800">בפרק זה תלמדו :</p>
+  </div>
+  <img class="a" src="assets/ic-zoom-b.png" style="left:798px;top:279px;width:25px" alt="">
+  <div class="a sky" style="left:671px;top:272px;width:122px;font-size:16px;line-height:1.35">כיצד לזהות במערכת את שדות האגף והמחלקה</div>
+  <img class="a" src="assets/ic-hierarchy-b.png" style="left:602px;top:279px;width:25px" alt="">
+  <div class="a sky" style="left:473px;top:272px;width:124px;font-size:16px;line-height:1.35">לבדוק אם קיימת חלוקה לפי נפה, אזור או רובע</div>
+  <img class="a" src="assets/ic-monitor-b.png" style="left:419px;top:279px;width:25px" alt="">
+  <div class="a sky" style="left:298px;top:272px;width:116px;font-size:16px;line-height:1.35">להיכנס לניהול ידע ולאתר את אנשי הקשר הרלוונטיים</div>
+  <div class="a w" style="left:312px;top:354px;width:517px;font-size:16px;line-height:1.35">כך תוודאו שכל פנייה יוצאת מחדר הבקרה בכיוון הנכון ומגיעה לגורם שיוכל להמשיך את הטיפול במהירות וביעילות.</div>
+  <button class="btn pulse" data-act="next" style="left:15px;top:607px;width:185px;height:48px">יוצאים למסלול הנכון</button>
+</section>
+
+<!-- ======================= 17 שדות אגף ומחלקה ======================= -->
+<section class="slide screen" id="s17" data-title="מכוונים למסלול הנכון – אגף ומחלקה" data-chapter="2" data-gate="1">
+  <img class="a bg" src="assets/bg-screen.jpg" style="left:0;top:45px;width:1200px;height:630px" alt="">
+  <div class="scr-title">מכוונים למסלול הנכון</div>
+  <div class="scr-txt"><p>כעת נתרגל כיצד לאתר במערכת את הפרטים שמכוונים את הפנייה לגורם הנכון.</p><p><b>זהו במסך את שדות האגף והמחלקה ולחצו עליהם להמשך.</b></p></div>
+  <div class="shot" style="left:37px;top:185px;width:1096px;height:357px">
+    <img class="ss" src="assets/ss-17.jpg" alt="טופס פנייה מלא">
+    <div class="hs" data-step="1" style="left:1.2%;top:26.3%;width:49%;height:15%"></div>
+  </div>
+  <img class="agent-back flip" src="assets/agent-back.png" style="left:800px;top:392px" alt="">
+  <div class="coach" data-coach="ok"><img class="flip" src="assets/agent-thumbs.png" style="left:717px;top:360px;width:432px" alt=""><div class="callout tr f14" style="left:500px;top:250px;width:202px"><b class="grn">מעולה!</b><br>זיהיתם את שדות האגף והמחלקה<button class="btn cont">ממשיכים</button><img class="vx" src="assets/v.png" alt=""></div></div>
+  <div class="coach" data-coach="retry"><img class="flip" src="assets/agent-confused.png" style="left:864px;top:392px;width:243px" alt=""><div class="callout tr f14" style="left:520px;top:300px;width:256px"><b class="org">בחרתם בשדות לא נכונים</b><br>נסו שוב…<img class="vx" src="assets/x.png" alt=""></div></div>
+  <div class="coach" data-coach="bad"><img class="flip" src="assets/agent-confused.png" style="left:864px;top:392px;width:243px" alt=""><div class="callout tr f14" style="left:520px;top:280px;width:229px"><b class="org">לא נכון…</b><br>לפניכם השדות הנכונים<button class="btn cont">ממשיכים</button><img class="vx" src="assets/x.png" alt=""></div></div>
+</section>
+
+<!-- ======================= 18א חלוקה לפי נפה / אזור / רובע – מפה על המסך, מאיה מצביעה (רקע: גשר המיתרים) ======================= -->
+<section class="slide" id="s18a" data-title="חלוקת אחריות לפי נפה, אזור או רובע – הסבר" data-chapter="2">
+  <img class="a bg" src="assets/bg-point.jpg" style="left:0;top:46px;width:1200px;height:654px" alt="">
+  <div class="a f16 w" style="left:587px;top:104px;width:556px;font-weight:800">חלוקת אחריות לפי נפה, אזור או רובע</div>
+  <div class="a w lh" style="left:587px;top:138px;width:556px;font-size:15.5px">בחלק מהמקרים, כדי לכוון את הפנייה ליעד המדויק, יש לבדוק גם אם המחלקה פועלת לפי חלוקת אחריות של <b class="sky">נפה, אזור או רובע</b>.</div>
+  <!-- מפה מחולקת לרובעים (קו עבה) ולנפות (קו מקווקו) – להמחשה -->
+  <div class="a citymap" data-anim="popin" data-delay=".5" style="left:652px;top:198px;width:214px;height:196px">
+    <svg viewBox="0 0 220 190">
+      <g stroke="#fff" stroke-width="2.5" stroke-linejoin="round">
+        <polygon points="20,12 150,6 202,40 150,70 80,75 30,55" fill="rgba(108,207,246,.45)"/>
+        <polygon points="150,70 202,40 216,110 170,132 130,106" fill="rgba(249,157,38,.45)"/>
+        <polygon points="80,75 150,70 130,106 110,126 70,116" fill="rgba(178,210,52,.45)"/>
+        <polygon points="6,72 30,55 80,75 70,116 40,150 10,122" fill="rgba(229,8,126,.4)"/>
+        <polygon points="40,150 70,116 110,126 130,106 170,132 150,182 70,186" fill="rgba(155,123,216,.45)"/>
+      </g>
+      <g stroke="rgba(255,255,255,.75)" stroke-width="1.2" stroke-dasharray="4 3" fill="none">
+        <path d="M70 12 L95 73M125 9 L118 71M168 60 L190 118M100 124 L110 184M140 118 L128 178M20 95 L73 96M30 138 L55 132"/>
+      </g>
+      <g font-family="Assistant,Arial" font-size="11" font-weight="800" fill="#fff" text-anchor="middle" paint-order="stroke" stroke="#001930" stroke-width="3">
+        <text x="112" y="42">רובע צפון</text><text x="175" y="96">רובע מזרח</text><text x="108" y="98">מרכז</text><text x="38" y="104">רובע מערב</text><text x="112" y="160">רובע דרום</text>
+      </g>
+    </svg>
+    <div class="maplegend"><span><i class="solid"></i>רובע</span><span><i class="dash"></i>נפה</span></div>
+  </div>
+  <div class="a w" style="left:880px;top:200px;width:263px;font-size:16px;font-weight:800">לדוגמה:</div>
+  <div class="exrow" style="left:880px;top:230px;border-color:var(--orange)"><b>ניקיון</b>חלוקה לפי נפות</div>
+  <div class="exrow" style="left:880px;top:285px;border-color:var(--sky)"><b>מאור וגינות נוף</b>חלוקה לפי אזורים</div>
+  <div class="exrow" style="left:880px;top:340px;border-color:var(--green)"><b>אחזקת המרחב הציבורי</b>חלוקה לפי רובעים</div>
+  <button class="btn pulse" data-act="next" style="left:15px;top:607px;width:185px;height:48px">לתרגול במערכת</button>
+</section>
+
+<!-- ======================= 18 חלוקה לפי נפה / אזור / רובע – תרגול ======================= -->
+<section class="slide screen" id="s18" data-title="מכוונים למסלול הנכון – רובע (תרגול)" data-chapter="2">
+  <img class="a bg" src="assets/bg-screen.jpg" style="left:0;top:45px;width:1200px;height:630px" alt="">
+  <div class="scr-title">מכוונים למסלול הנכון</div>
+  <div class="scr-txt"><p>האם אתם מזהים לאיזה <b>רובע</b> שייכת הפנייה?</p><p><b>לחצו על האזור הרלוונטי במסך.</b></p></div>
+  <div class="shot" style="left:37px;top:185px;width:1096px;height:357px">
+    <img class="ss" src="assets/ss-17.jpg" alt="טופס פנייה מלא">
+    <div class="hs" data-step="1" style="left:1.2%;top:41.8%;width:49%;height:7.2%"></div>
+  </div>
+  <img class="agent-back flip" src="assets/maya-think.png" style="left:975px;top:330px;width:205px" alt="מאיה חושבת ומסתכלת על המסך">
+  <div class="coach" data-coach="ok"><img class="flip" src="assets/agent-thumbs.png" style="left:717px;top:360px;width:432px" alt=""><div class="callout tr f14" style="left:500px;top:250px;width:202px"><b class="grn">מעולה!</b><br>הפנייה שייכת לרובע מערב – <span style="white-space:nowrap">רובע 3</span><button class="btn cont">ממשיכים</button><img class="vx" src="assets/v.png" alt=""></div></div>
+  <div class="coach" data-coach="retry"><img class="flip" src="assets/agent-confused.png" style="left:864px;top:392px;width:243px" alt=""><div class="callout tr f14" style="left:520px;top:300px;width:256px"><b class="org">בחרתם בשדה לא נכון</b><br>נסו שוב…<img class="vx" src="assets/x.png" alt=""></div></div>
+  <div class="coach" data-coach="bad"><img class="flip" src="assets/agent-confused.png" style="left:864px;top:392px;width:243px" alt=""><div class="callout tr f14" style="left:520px;top:280px;width:229px"><b class="org">לא נכון…</b><br>לפניכם השדה הנכון<button class="btn cont">ממשיכים</button><img class="vx" src="assets/x.png" alt=""></div></div>
+</section>
+
+<!-- ======================= 19 ניהול ידע – איתור איש קשר ======================= -->
+<section class="slide screen" id="s19" data-title="מאתרים את איש הקשר להמשך הטיפול" data-chapter="2" data-gate="1">
+  <img class="a bg" src="assets/bg-screen.jpg" style="left:0;top:45px;width:1200px;height:630px" alt="">
+  <div class="scr-title">מאתרים את איש הקשר להמשך הטיפול</div>
+  <div class="scr-txt" id="s19inst"><p>לאחר שזיהיתם את המחלקה ואת גזרת האחריות המתאימה, היכנסו ל<b>ניהול ידע</b>. שם תוכלו לאתר את אנשי הקשר הרלוונטיים בהתאם לחלוקת העבודה של המחלקה.</p><p><b>לחצו על שורת החיפוש</b> כדי להקליד את שם הנפה, האזור או הרובע.</p></div>
+  <div class="shot" style="left:137px;top:183px;width:926px;height:460px">
+    <img class="ss" src="assets/ss-19.png" alt="ניהול ידע">
+    <div class="typed" id="s19typed" style="left:8%;top:20.2%;width:86.6%;height:5.4%"></div>
+    <div class="cover" id="s19cover" style="left:.1%;top:26.4%;width:99.8%;height:73.4%">תוצאות החיפוש יופיעו כאן</div>
+    <div class="hs" data-step="1" data-onhit="s19type" style="left:3.8%;top:19.1%;width:92.5%;height:7%"></div>
+  </div>
+  <div class="coach" data-coach="ok"><img class="flip" src="assets/agent-thumbs.png" style="left:800px;top:380px;width:400px" alt=""><div class="callout tr f14" style="left:560px;top:250px;width:230px"><b class="grn">מעולה!</b><br>חיפשתם את הנפה ואיתרתם את אנשי הקשר להמשך הטיפול<button class="btn cont">ממשיכים</button><img class="vx" src="assets/v.png" alt=""></div></div>
+  <div class="coach" data-coach="retry"><img src="assets/agent-confused.png" style="left:40px;top:392px;width:243px" alt=""><div class="callout tl f14" style="left:110px;top:270px;width:220px"><b class="org">לא בדיוק…</b><br>נסו שוב…</div></div>
+  <div class="coach" data-coach="bad"><img src="assets/agent-confused.png" style="left:93px;top:392px;width:243px" alt=""><div class="callout tl f14" style="left:90px;top:300px;width:230px"><b class="org">לא נכון…</b><br>לפניכם האזור הנכון<button class="btn cont">ממשיכים</button></div></div>
+</section>
+
+<!-- ======================= 20 סימולציית הכנה (גרירה – לפי "עיצוב שקף 20 בתסריט") ======================= -->
+<section class="slide dd" id="s20" data-title="סימולציית הכנה ליציאה למרוץ" data-chapter="2" data-nonext="1">
+  <img class="a bg" src="assets/bg-drag.jpg" style="left:0;top:45px;width:1200px;height:630px" alt="">
+  <div class="a w" style="left:674px;top:80px;width:484px;font-size:22px;font-weight:800">סימולציית הכנה ליציאה למרוץ</div>
+  <div class="a w" style="left:352px;top:136px;width:806px;font-size:14.7px;line-height:1.35"><b>אספתם את המידע מהתושב וכעת עליכם להעביר את הפנייה לגורם המטפל.</b><br>גררו את השלבים למקום הנכון לפי סדר העבודה במוקד.</div>
+  <img class="dd-num" src="assets/dd-1.png" style="left:1111px;top:186px" alt="1">
+  <img class="dd-num" src="assets/dd-2.png" style="left:926px;top:186px" alt="2">
+  <img class="dd-num" src="assets/dd-3.png" style="left:742px;top:186px" alt="3">
+  <img class="dd-num" src="assets/dd-4.png" style="left:556px;top:186px" alt="4">
+  <img class="dd-num" src="assets/dd-5.png" style="left:375px;top:186px" alt="5">
+  <img class="dd-num" src="assets/dd-6.png" style="left:190px;top:186px" alt="6">
+  <div class="dd-slot" data-slot="1" style="left:995px;top:245px"></div>
+  <div class="dd-slot" data-slot="2" style="left:810px;top:245px"></div>
+  <div class="dd-slot" data-slot="3" style="left:624px;top:245px"></div>
+  <div class="dd-slot" data-slot="4" style="left:439px;top:245px"></div>
+  <div class="dd-slot" data-slot="5" style="left:254px;top:245px"></div>
+  <div class="dd-slot" data-slot="6" style="left:69px;top:245px"></div>
+  <div class="a c sky" style="left:69px;top:402px;width:1093px;font-size:13.3px;font-weight:800">מחסן אפשרויות:</div>
+  <div class="dd-card" data-order="2" style="left:995px;top:440px">מזינים את כתובת האירוע</div>
+  <div class="dd-card" data-order="1" style="left:810px;top:440px">ממלאים את פרטי הפונה</div>
+  <div class="dd-card" data-order="5" style="left:624px;top:440px">נכנסים לניהול ידע ומאתרים את איש הקשר הרלוונטי</div>
+  <div class="dd-card" data-order="4" style="left:439px;top:440px">בודקים האם קיימת חלוקה לפי אזור / נפה / רובע</div>
+  <div class="dd-card" data-order="6" style="left:254px;top:440px">מעבירים את הפנייה לגורם המטפל</div>
+  <div class="dd-card" data-order="3" style="left:69px;top:440px">בוחרים נושא פנייה ומתעדים את תיאור הפנייה</div>
+  <button class="dd-check" disabled style="left:72px;top:596px;width:165px">בדיקה</button>
+  <button class="btn dd-next" data-act="next" style="left:72px;top:596px;width:165px;height:44px;display:none">ממשיכים</button>
+  <div class="layer" data-layer="fb-ok">
+    <div class="dim"></div>
+    <div class="card" style="left:300px;top:205px;width:600px;height:262px"></div>
+    <img class="a vx" src="assets/v.png" style="left:770px;top:178px;width:92px;height:84px" alt="">
+    <div class="a c" style="left:340px;top:222px;width:520px"><div class="f192 grn" style="font-weight:800">מצוין!</div><div class="f16" style="font-weight:800">זהו רצף העבודה במערכת.</div></div>
+    <div class="a c lh" style="left:330px;top:296px;width:540px;font-size:15.5px">לאחר השלמת פרטי הפנייה ובחירת הנושא, ניתן לראות את <b>האגף והמחלקה</b> המטפלים. כאשר קיימת חלוקה לפי אזור, נפה או רובע, יש לאתר את <b>איש הקשר המתאים בניהול ידע</b> לפני העברת הפנייה להמשך טיפול.</div>
+    <button class="btn" data-act="next" style="left:508px;top:402px;width:185px;height:44px">ממשיכים במסלול</button>
+  </div>
+  <div class="layer" data-layer="fb-retry">
+    <div class="dim"></div>
+    <div class="card" style="left:360px;top:225px;width:480px;height:205px"></div>
+    <img class="a vx" src="assets/x.png" style="left:760px;top:200px;width:70px;height:74px" alt="">
+    <div class="a c" style="left:390px;top:240px;width:420px"><div class="f192 org" style="font-weight:800">לא נכון…</div><div class="f16" style="font-weight:800">נסו שוב!</div></div>
+    <div class="a c lh" style="left:390px;top:310px;width:420px;font-size:15px">השלבים שסומנו <b class="org">בכתום</b> אינם במקום הנכון.<br>השלבים שסומנו <b style="color:#7ea31a">בירוק</b> נשארים במקומם.</div>
+    <button class="btn" data-act="fn:ddRetry" style="left:508px;top:368px;width:185px;height:44px">נסו שוב</button>
+  </div>
+  <div class="layer" data-layer="fb-bad">
+    <div class="dim"></div>
+    <div class="card" style="left:300px;top:215px;width:600px;height:238px"></div>
+    <img class="a vx" src="assets/x.png" style="left:780px;top:190px;width:70px;height:74px" alt="">
+    <div class="a c" style="left:340px;top:230px;width:520px"><div class="f192 org" style="font-weight:800">לא נכון…</div><div class="f16" style="font-weight:800">שימו לב לסדר הפעולות.</div></div>
+    <div class="a c lh" style="left:330px;top:302px;width:540px;font-size:15.5px">כדי שהפנייה תגיע לגורם הנכון, חשוב לפעול לפי הסדר: תחילה משלימים את פרטי הפנייה, לאחר מכן בודקים את הגורם המטפל ואת חלוקת האחריות, ורק בסיום מעבירים את הפנייה לטיפול.</div>
+    <button class="btn" data-act="fn:ddShow" style="left:508px;top:390px;width:185px;height:44px">לסדר הנכון</button>
+  </div>
+</section>
+
+<!-- ======================= 21 מפת המרוץ (3) ======================= -->
+<section class="slide map" id="s21" data-title="מפת המרוץ העירוני (3)" data-chapter="3" data-done="2"></section>
+
+<!-- ======================= 22א פניות הדורשות מעבר למסלול טיפול מיידי (שקף 22 בתסריט – חלק 1) ======================= -->
+<!-- רקע: מאיה מרוכזת מול המסכים; בחלון משמאל רכב עירוני -->
+<section class="slide" id="s22" data-title="פניות הדורשות מעבר למסלול טיפול מיידי" data-chapter="3">
+  <img class="a bg" src="assets/bg-question.jpg" style="left:0;top:46px;width:1200px;height:641px" alt="">
+  <div class="a w" style="left:430px;top:74px;width:725px;font-size:25px;font-weight:800">פניות הדורשות מעבר <span class="org">למסלול טיפול מיידי</span></div>
+  <div class="a w lh" style="left:430px;top:118px;width:725px;font-size:18px">לא כל פנייה מטופלת באותו אופן. במקרים מסוימים, מעבר לפתיחת הפנייה במערכת, נדרש <b class="sky">ליצור קשר עם גורם מטפל באופן מיידי</b>.</div>
+  <div class="a sky" style="left:430px;top:190px;width:725px;font-size:19px;font-weight:800">מקרים אלו כוללים:</div>
+  <ul class="caselist" style="left:430px;top:226px;width:725px">
+    <li>פניות עם רגישות</li><li>אנשים עם מוגבלויות</li>
+    <li>משפחות שכולות</li><li>מפגעים בטיחותיים</li>
+    <li>אירועי חירום</li><li>פניות המתקבלות מחוץ לשעות הפעילות של העירייה</li>
+  </ul>
+</section>
+
+<!-- ======================= 22ב הפניות המיוחדות מתבצעות ב-4 מצבים (שקף 22 בתסריט – חלק 2) ======================= -->
+<section class="slide" id="s22b" data-title="פניות מיוחדות – 4 מצבים והכונן התורן" data-chapter="3">
+  <img class="a bg" src="assets/bg-map.jpg" style="left:0;top:54px;width:1200px;height:622px" alt="">
+  <div class="a f16 w" style="left:326px;top:78px;width:814px;font-weight:800">הפניות המיוחדות מתבצעות ב-4 מצבים:</div>
+  <div class="shift" style="left:950px;top:122px"><svg viewBox="0 0 64 64"><path d="M10 44h44M19 44a13 13 0 0 1 26 0"/><path d="M16 51h32M22 57h20"/><path d="M32 14v7M14.5 22l5 5M49.5 22l-5 5M6 34h6M52 34h6"/><path d="M5 10l4 3M59 10l-4 3"/></svg>משמרת ערב</div>
+  <div class="shift" style="left:742px;top:122px"><svg viewBox="0 0 64 64"><path d="M39 12a19 19 0 1 0 14 31A16 16 0 0 1 39 12z"/><path d="M17 12v6M14 15h6M50 50v5M47.5 52.5h5"/><path d="M8 30l-4-1M10 45l-4 2M58 20l4-2"/></svg>משמרת לילה</div>
+  <div class="shift" style="left:534px;top:122px"><svg viewBox="0 0 64 64"><rect x="12" y="16" width="40" height="38" rx="5"/><path d="M12 27h40M23 10v10M41 10v10"/><path d="M20 35h8v8h-8zM36 35h8v8h-8z"/><path d="M4 22l4 2M4 40h5M60 22l-4 2M60 40h-5"/></svg>משמרות סופ"ש</div>
+  <div class="shift" style="left:326px;top:122px"><svg viewBox="0 0 64 64"><path d="M20 48V36a12 12 0 0 1 24 0v12"/><path d="M14 48h36v7H14z"/><path d="M32 30v8"/><path d="M32 8v8M14 14l5 5M50 14l-5 5M6 30h7M51 30h7"/></svg>במצב חירום</div>
+  <div class="a w lh" style="left:326px;top:282px;width:814px;font-size:16px">כאשר מתקבלת פנייה בשעות אלה ניתן לפנות <b class="sky">לכונן התורן של המחלקה</b>. הכונן הוא איש הקשר האחראי לטיפול בפניות דחופות או בפניות שהן מחוץ לשעות העבודה.</div>
+  <button class="btn pulse" data-act="next" style="left:955px;top:340px;width:185px;height:44px">לחצו לפנייה לכונן</button>
+</section>
+
+<!-- ======================= 23 פנייה לכונן (שקף 23 בתסריט) ======================= -->
+<section class="slide" id="s23" data-title="פנייה לכונן – טבלת הכוננים" data-chapter="3" data-nonext="1">
+  <img class="a bg" src="assets/bg-screen.jpg" style="left:0;top:45px;width:1200px;height:630px" alt="">
+  <div class="scr-title">פנייה לכונן</div>
+  <div class="scr-txt"><p>בכל תחילת משמרת היכנסו ל<b>ניהול ידע</b>, לשונית <b>כוננות יומי</b>, ושם תראו את <b>טבלת הכוננים</b> לאותה משמרת.</p></div>
+  <img class="a" src="assets/ss-23.png" style="left:190px;top:166px;width:960px;border:1px solid #d5d5d5;box-shadow:0 4px 14px rgba(0,0,0,.15)" alt="טבלת כוננים יומית בניהול ידע">
+  <button class="btn pulse" data-act="layer:flag" style="left:15px;top:607px;width:165px;height:48px">ממשיכים</button>
+  <!-- פופאפ: דגל אזהרה -->
+  <div class="layer" data-layer="flag">
+    <div class="dim"></div>
+    <div class="card" style="left:290px;top:190px;width:620px;height:300px"></div>
+    <div class="a" style="left:568px;top:162px;width:64px;height:64px;border-radius:50%;background:var(--orange);display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(0,0,0,.3)"><img src="assets/ic-flag.png" style="width:36px" alt="דגל אזהרה"></div>
+    <div class="a c org" style="left:290px;top:238px;width:620px;font-size:24px;font-weight:800">שימו לב לנקודת הבקרה הבאה!</div>
+    <div class="a c lh" style="left:330px;top:284px;width:540px;font-size:19px">כאשר מופיע <b class="org">דגל אזהרה</b> על המסלול,<br>לא מסתפקים בהעברת הפנייה במערכת –<br><b>פועלים מיד ומזניקים את הגורם המתאים.</b></div>
+    <button class="btn" data-act="next" style="left:508px;top:418px;width:185px;height:46px">ממשיכים במסלול</button>
+  </div>
+</section>
+
+<!-- ======================= 24 מפת המרוץ (4) ======================= -->
+<section class="slide map" id="s24" data-title="מפת המרוץ העירוני (4)" data-chapter="4" data-done="3"></section>
+
+<!-- ======================= 25 רגע לפני קו הסיום ======================= -->
+<section class="slide choice" id="s25" data-title="רגע לפני קו הסיום" data-chapter="4">
+  <img class="a bg" src="assets/bg-case.jpg" style="left:-3px;top:45px;width:1206px;height:630px" alt="">
+  <div class="callout tr f128 lh" style="left:640px;top:150px;width:390px;min-height:70px"><b>מוקדנית:</b><br>"רשמתי את כל הפרטים, ואיתרתי את הגורם המטפל."</div>
+  <div class="card" style="left:105px;top:380px;width:990px;height:334px"></div>
+  <div class="a c" style="left:105px;top:394px;width:990px;font-size:16px">השלמתם את פרטי הדיווח, בחרתם את נושא הפנייה ואיתרתם את הגורם המטפל.</div>
+  <div class="a f128 c" style="left:105px;top:420px;width:990px;font-weight:800">מה הצעד הבא לפני שמסיימים את השיחה?</div>
+  <button class="opt sm" style="left:612px;top:458px;width:420px;height:100px">לסיים את השיחה ולאחר מכן לשמור את הפנייה.</button>
+  <button class="opt sm" data-correct="1" style="left:168px;top:458px;width:420px;height:100px">לבצע "שמור ונתב", לעדכן את התושב שהפנייה הועברה לטיפול ולאחר מכן לסיים את השיחה.</button>
+  <button class="check" disabled style="left:168px;top:576px;width:140px">בדיקה</button>
+  <div class="layer inline" data-layer="fb-ok">
+    <div class="card" style="left:180px;top:352px;width:840px;height:222px"></div>
+    <div class="a fbrow" style="left:180px;top:368px;width:840px"><img class="vx" src="assets/v.png" alt=""><b class="grn" style="font-size:24px">מעולה!</b><b style="font-size:19px">הפנייה מוכנה לחצות את קו הסיום.</b></div>
+    <div class="a c lh" style="left:220px;top:420px;width:760px;font-size:16px">לפני סיום השיחה יש לבצע <b>"שמור ונתב"</b> ולוודא שכל פרטי הפנייה נשמרו במערכת. לאחר מכן יש לעדכן את התושב שהפנייה הועברה לטיפול ושמספר הפנייה יישלח אליו בהודעת SMS.</div>
+    <button class="btn" data-act="next" style="left:480px;top:506px;width:240px;height:44px">לחצו להמשך</button>
+  </div>
+  <div class="layer inline" data-layer="fb-bad">
+    <div class="card" style="left:180px;top:352px;width:840px;height:222px"></div>
+    <div class="a fbrow" style="left:180px;top:368px;width:840px"><img class="vx" src="assets/x.png" alt=""><b class="org" style="font-size:24px">לא נכון…</b><b style="font-size:19px">עצרו – עדיין לא חוצים את קו הסיום.</b></div>
+    <div class="a c lh" style="left:220px;top:420px;width:760px;font-size:16px">סיום השיחה לפני שמירת הפנייה עלול לגרום לכך שהמידע <b>לא יישמר במערכת</b>. תחילה מבצעים "שמור ונתב", מוודאים שהפנייה הועברה לטיפול, מעדכנים את התושב ורק אז מסיימים את השיחה.</div>
+    <button class="btn" data-act="next" style="left:480px;top:506px;width:240px;height:44px">ממשיכים</button>
+  </div>
+</section>
+
+<!-- ======================= 26א מתי הפנייה חוצה את קו הסיום? – מאיה מסבירה, מכונית המרוץ מתקרבת לקו הסיום (שקף 26 בתסריט, חלק ההסבר) ======================= -->
+<section class="slide" id="s26a" data-title="מתי הפנייה חוצה את קו הסיום? – הסבר" data-chapter="4">
+  <!-- רקע: סרטון הפתיח (המכונית האדומה מהשקף הראשון מגיעה ונעצרת), מוגדל כך שעמדות חדר הבקרה מימין נחתכות מחוץ למסגרת -->
+  <div class="a bg" style="left:0;top:45px;width:1200px;height:630px;overflow:hidden">
+    <video id="v26" data-start=".4" src="assets/opening.mp4" muted playsinline preload="auto" style="position:absolute;left:0;top:-390px;width:1800px;height:1014px"></video>
+  </div>
+  <img class="a" src="assets/maya-explain.png" data-anim="slidein" data-delay=".2" style="left:520px;top:190px;width:262px" alt="המוקדנית מאיה">
+  <div class="speech tail-left" style="left:800px;top:120px;width:380px;--ty:120px">
+    <div class="f16" style="font-weight:800">מתי הפנייה חוצה את קו הסיום?</div>
+    <p class="lh" style="font-size:15px;margin-top:6px">ברוב המקרים, לאחר ביצוע <b>"שמור ונתב"</b>, הפנייה ממשיכה במסלול הטיפול ומועברת לגורם האחראי.</p>
+    <p class="lh" style="font-size:15px;margin-top:6px">עם זאת, ישנם מקרים שבהם <b>המוקדנית מאיה</b> נותנת לתושב מענה כבר במהלך השיחה, ולכן <b>ניתן לסגור את הפנייה בסיום השיחה</b> ולאחר השלמת הטיפול.</p>
+    <p class="lh" style="font-size:15px;margin-top:6px;color:#4a5a6a">לדוגמה: לכידת נחש, הפניה לבזק, תקלה בפסנתרי רחוב ועוד.</p>
+  </div>
+  <button class="btn pulse" data-act="next" style="left:15px;top:607px;width:185px;height:48px">לתרגול במערכת</button>
+</section>
+
+<!-- ======================= 26 סגירת הפנייה – תרגול ======================= -->
+<section class="slide screen" id="s26" data-title="מתי הפנייה חוצה את קו הסיום? – תרגול" data-chapter="4">
+  <img class="a bg" src="assets/bg-screen.jpg" style="left:0;top:45px;width:1200px;height:630px" alt="">
+  <div class="scr-title">מתי הפנייה חוצה את קו הסיום?</div>
+  <div class="scr-txt"><p><b>לחצו על השדה</b> שבו מדווחים במערכת על סיום הטיפול וסגירת הפנייה.</p></div>
+  <div class="shot" style="left:610px;top:165px;width:500px;height:440px">
+    <img class="ss" src="assets/ss-26.png" alt="טיפול בפנייה – סטטוס">
+    <div class="hs" data-step="1" style="left:17.9%;top:9.2%;width:57.8%;height:7.5%"></div>
+  </div>
+  <img class="agent-back" src="assets/maya-point.png" style="left:150px;top:150px;width:300px" alt="מאיה עומדת ומצביעה על המסך">
+  <div class="coach" data-coach="ok"><img src="assets/agent-thumbs.png" style="left:51px;top:360px;width:432px" alt=""><div class="callout tl f14" style="left:357px;top:290px;width:240px"><b class="grn">מעולה!</b><br>כאן מעדכנים את הסטטוס ל"סיום טיפול" וסוגרים את הפנייה<button class="btn cont">ממשיכים</button><img class="vx" src="assets/v.png" alt=""></div></div>
+  <div class="coach" data-coach="retry"><img src="assets/agent-confused.png" style="left:93px;top:392px;width:243px" alt=""><div class="callout tl f14" style="left:357px;top:350px;width:230px"><b class="org">לא בדיוק…</b><br>נסו שוב…<img class="vx" src="assets/x.png" alt=""></div></div>
+  <div class="coach" data-coach="bad"><img src="assets/agent-confused.png" style="left:93px;top:392px;width:243px" alt=""><div class="callout tl f14" style="left:357px;top:326px;width:230px"><b class="org">לא נכון…</b><br>לפניכם האזור הנכון<button class="btn cont">ממשיכים</button><img class="vx" src="assets/x.png" alt=""></div></div>
+</section>
+
+<!-- ======================= 27 סיום ======================= -->
+<section class="slide" id="s27" data-title="מהזינוק ועד קו הסיום" data-chapter="4" data-speedo="6">
+  <img class="a bg" src="assets/bg-end.jpg" style="left:-5px;top:45px;width:1213px;height:638px" alt="">
+  <div class="a f14 w" style="left:949px;top:68px;width:220px;font-weight:800">מהזינוק ועד קו הסיום</div>
+  <div class="a f11 w" style="left:340px;top:112px;width:829px">לאורך הלומדה ניהלתם את המסלול מרגע כניסתה של פנייה לחדר הבקרה ועד להעברתה להמשך טיפול.</div>
+  <div class="a f11 w lh" style="left:681px;top:140px;width:488px">
+    <p style="font-weight:800">בדרך:</p>
+    <ul class="dots">
+      <li>קיבלתם את הדיווח וזיהיתם מה קרה בשטח</li>
+      <li>אספתם את המידע הנדרש ובניתם תמונת מצב מלאה</li>
+      <li>תיעדתם את פרטי הפנייה במערכת</li>
+      <li>זיהיתם את האגף, המחלקה וגזרת האחריות המתאימים</li>
+      <li>איתרתם את איש הקשר שאליו יש להעביר את הפנייה</li>
+      <li>הגבתם למצבים מיוחדים הדורשים פעולה מיידית</li>
+      <li>שמרתם, ניתבתם וסגרתם את הפנייה בהתאם לתהליך העבודה</li>
+    </ul>
+  </div>
+  <div class="a w lh" style="left:334px;top:352px;width:829px"><span class="f16">בכל פנייה, </span><b class="f16 sky">אתם מנהלי המרוץ:</b><br><span class="f11">מקשיבים, שואלים את השאלות הנכונות, מכוונים את הפנייה למסלול המתאים ומוודאים שהיא מגיעה ליעד הנכון.</span></div>
+  <div class="a f192 sky" style="left:334px;top:420px;width:829px;font-weight:800">בזכותכם המירוץ הושלם בהצלחה!</div>
+  <button class="btn pulse" data-act="layer:done" data-sfx="finish" style="left:295px;top:388px;width:210px;height:50px;font-size:18.7px">חוצים את קו הסיום 🏁</button>
+  <div class="layer" data-layer="done">
+    <div class="dim"></div>
+    <div class="toast"><div class="f27" style="font-weight:800">🏁 חציתם את קו הסיום!</div><div class="f16" style="margin-top:8px">סיימתם את יחידה 4 – טיפול בפנייה.</div></div>
+  </div>
+</section>
+
+<!-- ======================= CONTROLS ======================= -->
+<div id="controls">
+  <button class="navbtn" id="btnPrev" aria-label="הקודם"><svg><use href="#arrowR"/></svg></button>
+  <button class="navbtn" id="btnNext" aria-label="הבא"><svg><use href="#arrowL"/></svg></button>
+</div>
+
+<!-- map template (נשכפל לכל .slide.map) -->
+<template id="mapTpl">
+  <img class="a bg" src="assets/bg-map.jpg" style="left:0;top:54px;width:1200px;height:622px" alt="">
+  <div class="a f16 w" style="left:830px;top:69px;width:280px;font-weight:800">מפת המרוץ העירוני</div>
+  <div class="a f128 w lh" style="left:859px;top:118px;width:254px">
+    <p>המוקדנית מאיה היא נקודת הזינוק של תהליך הטיפול בפנייה.</p>
+    <p style="margin-top:8px">לפניכם ארבע תחנות מרכזיות שילוו אתכם מקבלת הדיווח ועד לסגירת הטיפול בצורה מקצועית ומדויקת.</p>
+    <p class="maphint" style="margin-top:14px;font-weight:800">לחצו עליהם להרחבה</p>
+  </div>
+  <img class="a" src="assets/nav-cards.png" style="left:75px;top:69px;width:784px;height:379px" alt="">
+  <div class="mcard" data-station="1" data-go="s06" style="left:518px;top:105px"><img class="num" src="assets/num-1.png" alt=""><img class="ic" src="assets/ic-racetrack.png" alt=""><div class="lbl">מקבלים תמונת מצב</div></div>
+  <div class="mcard" data-station="2" data-go="s16" style="left:198px;top:105px"><img class="num" src="assets/num-2.png" alt=""><img class="ic" src="assets/ic-flag.png" alt=""><div class="lbl">מכוונים למסלול הנכון</div></div>
+  <div class="mcard" data-station="3" data-go="s22" style="left:518px;top:242px"><img class="num" src="assets/num-3.png" alt=""><img class="ic" src="assets/ic-warning.png" alt=""><div class="lbl">מגיבים למצבים מיוחדים</div></div>
+  <div class="mcard" data-station="4" data-go="s25" style="left:198px;top:242px"><img class="num" src="assets/num-4.png" alt=""><img class="ic" src="assets/ic-finish.png" alt=""><div class="lbl">חוצים את קו הסיום</div></div>
+</template>
+
+</div>
+
+<script>
+(function(){
+  const stage = document.getElementById('stage');
+  const master = document.getElementById('master');
+  const menuSpans = [...document.querySelectorAll('#menu span')];
+  const btnNext = document.getElementById('btnNext');
+  const btnPrev = document.getElementById('btnPrev');
+
+  /* ---- sounds (assets/sfx/*.wav) ---- */
+  const SFX = {};
+  ['click', 'correct', 'wrong', 'ring', 'start', 'finish', 'finishline'].forEach(n => { const a = new Audio(`assets/sfx/${n}.wav`); a.preload = 'auto'; SFX[n] = a; });
+  const VOL = { click: .6, finishline: .7 };
+  let ringing = null;
+  const stopRing = () => { if (ringing) { ringing.pause(); ringing = null; } };
+  // opening slide: vintage rally-car sound (assets/sfx/rally.mp3)
+  let rally = null, rallyPending = false;
+  function startRally(){
+    rallyPending = false;
+    if (muted) return;
+    if (!rally) { rally = new Audio('assets/sfx/rally.mp3'); rally.preload = 'auto'; }
+    clearInterval(rally._fade); rally.volume = .8; rally.currentTime = 0;
+    rally.play().catch(() => { rallyPending = true; });
+  }
+  function stopRally(){
+    rallyPending = false;
+    if (!rally || rally.paused) return;
+    clearInterval(rally._fade);
+    rally._fade = setInterval(() => { rally.volume = Math.max(0, rally.volume - .08); if (rally.volume <= 0) { clearInterval(rally._fade); rally.pause(); } }, 50);   // gentle fade-out
+  }
+  let muted = false;
+  try { muted = localStorage.getItem('u4-muted') === '1'; } catch (e) {}
+  const soundBtn = document.getElementById('sound');
+  soundBtn.classList.toggle('muted', muted);
+  soundBtn.addEventListener('click', e => {
+    e.stopPropagation(); muted = !muted; soundBtn.classList.toggle('muted', muted);
+    try { localStorage.setItem('u4-muted', muted ? '1' : '0'); } catch (err) {}
+    if (!muted) play('click'); else { stopRing(); stopRally(); }
+  });
+  function play(n){
+    if (muted || !SFX[n]) return;
+    const a = SFX[n].cloneNode(); a.volume = VOL[n] ?? 1; a.play().catch(() => {});
+  }
+
+  /* ---- build map slides ---- */
+  const tpl = document.getElementById('mapTpl');
+  document.querySelectorAll('.slide.map').forEach(s => {
+    s.appendChild(tpl.content.cloneNode(true));
+    const done = +s.dataset.done;
+    s.querySelectorAll('.mcard').forEach(c => {
+      const n = +c.dataset.station;
+      if (n <= done) { c.classList.add('done'); c.querySelector('.ic').src = 'assets/ic-finish-flag.png'; }
+      else if (n === done + 1) c.classList.add('next');
+      else c.classList.add('locked');
+    });
+    if (done > 0) s.querySelector('.maphint').textContent = 'לחצו על התחנה הבאה במסלול';
+  });
+
+  /* ---- feedback popups are shown a bit smaller: wrap their content in a scaled box ---- */
+  document.querySelectorAll('.layer[data-layer^="fb-"]:not(.inline)').forEach(l => {
+    const box = document.createElement('div'); box.className = 'fbbox' + (l.querySelector('.dim') ? '' : ' low');
+    [...l.children].filter(c => !c.classList.contains('dim') && !c.classList.contains('fbchar')).forEach(c => box.appendChild(c));
+    l.appendChild(box);
+  });
+
+  const slides = [...document.querySelectorAll('.slide')];
+  const idx = id => slides.findIndex(s => s.id === id);
+  let cur = 0, k = 1;
+
+  function fit(){
+    k = Math.min(window.innerWidth / 1200, window.innerHeight / 675);
+    stage.style.transform = `translate(-50%,-50%) scale(${k})`;
+  }
+  window.addEventListener('resize', fit); fit();
+
+  /* ---- entrance animations: every visible element rises in, one after the other ---- */
+  function animate(root, base = 0, step = .06){
+    const els = [...root.children].filter(el => !el.classList.contains('bg') && !el.classList.contains('layer') && !el.classList.contains('coach')
+      && !el.classList.contains('vx') && !el.classList.contains('after-video') && !el.classList.contains('dim') && !el.classList.contains('dropdown') && el.tagName !== 'TEMPLATE'
+      && !(el.tagName === 'BUTTON' && el.closest('.layer')));   // feedback buttons are always visible
+    els.forEach((el, i) => {
+      el.classList.remove('in'); if (el.dataset.anim) el.style.animation = 'none';
+      void el.offsetWidth;                          // restart the animation
+      const d = el.dataset.delay !== undefined ? +el.dataset.delay : base + Math.min(i * step, 1);
+      el.style.setProperty('--d', d + 's');
+      el.classList.add('in');
+      if (el.dataset.anim) el.style.animation = `${el.dataset.anim} .7s ease ${d}s both`;
+    });
+  }
+
+  /* ---- videos: play once and hold the last frame (data-start = delay in seconds before playing) ---- */
+  function startVideo(s){
+    const v = s.querySelector('video:not(.still)'); if (!v) return;   // .still = video used as a still background
+    clearTimeout(s._vt);
+    v.pause();
+    try { v.currentTime = 0; } catch (e) {}
+    const delay = +(v.dataset.start || 0) * 1000;
+    s._vt = setTimeout(() => { if (slides[cur] === s) tryPlay(v); }, delay);
+  }
+  function tryPlay(v){
+    const p = v.play();
+    if (p && p.catch) p.catch(() => v.addEventListener('canplay', () => v.play().catch(() => {}), { once: true }));
+  }
+  // autoplay can be blocked while the page loads in the background: retry when visible / on first interaction
+  const resume = () => {
+    const v = slides[cur].querySelector('video:not(.still)');
+    if (v && v.paused && !v.ended && v.currentTime < .1 && !v.dataset.start) tryPlay(v);
+  };
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) resume(); });
+  document.addEventListener('pointerdown', e => {
+    resume();
+    if (rallyPending && cur === 0 && !e.target.closest('[data-act]')) startRally();   // sound was blocked until the first click
+  }, { capture: true });
+
+  /* ---- navigation: ← (left side) = forward, → (right side) = back; always clickable.
+         the forward arrow is hidden while the slide (or an open layer) has its own "continue" button,
+         or when the slide manages its own flow (data-nonext="1").
+         on the race map it stays greyed out until all four stations are done ---- */
+  function updateNav(){
+    const s = slides[cur];
+    const ownBtn = [...s.querySelectorAll('[data-act="next"]')].some(b => { const l = b.closest('.layer'); return !l || l.classList.contains('show'); });
+    btnNext.classList.toggle('gone', cur === slides.length - 1 || ownBtn || s.dataset.nonext === '1' || s.classList.contains('screen'));
+    btnNext.classList.toggle('disabled', s.classList.contains('map') && +s.dataset.done < 4);
+    btnPrev.classList.toggle('gone', cur === 0);
+  }
+  function go(i, silent){
+    if (i < 0 || i >= slides.length) return;
+    const old = slides[cur];
+    old.classList.remove('active'); hideLayers(old);
+    old.querySelectorAll('video').forEach(v => v.pause());
+    cur = i;
+    const s = slides[cur];
+    s.classList.add('active');
+    master.classList.toggle('hidden', s.dataset.master === '0');
+    menuSpans.forEach((m, j) => m.classList.toggle('cur', j === +s.dataset.chapter));
+    s.querySelectorAll('.check').forEach(c => c.style.display = '');   // returning to a question: it can be answered again
+    animate(s, .15);
+    startVideo(s);
+    stopRing();
+    if (i === 0) startRally(); else stopRally();   // opening: rally-car sound
+    if (s.id === 's06') {   // incoming call: the phone rings (in a loop) from the moment Maya puts on the headset until the call is answered
+      clearTimeout(s._rt);
+      s._rt = setTimeout(() => {
+        if (slides[cur] !== s || muted) return;
+        ringing = SFX.ring.cloneNode(); ringing.loop = true; ringing.volume = .8; ringing.play().catch(() => {});
+      }, 2200);
+    }
+    if (s.id === 's27') { clearTimeout(s._ft); s._ft = setTimeout(() => { if (slides[cur] === s) play('finishline'); }, 500); }   // gentle finish-line sound
+    if (s.dataset.intro && !s._introDone) { s._introDone = true; setTimeout(() => showLayer(s, s.dataset.intro), 350); }
+    updateNav();
+  }
+  const next = () => go(cur + 1);
+  btnNext.addEventListener('click', () => {
+    const s = slides[cur];
+    if (s.classList.contains('map')) { const nx = s.querySelector('.mcard.next'); if (nx) return go(idx(nx.dataset.go)); }
+    next();
+  });
+  btnPrev.addEventListener('click', () => go(cur - 1));
+  document.addEventListener('keydown', e => {
+    if (e.key === 'ArrowLeft') btnNext.click();        // RTL: left = forward
+    else if (e.key === 'ArrowRight') btnPrev.click();  // right = back
+  });
+
+  /* ---- layers ---- */
+  function showLayer(s, name){
+    const l = s.querySelector(`.layer[data-layer="${name}"]`); if (!l) return;
+    l.classList.add('show');
+    l.querySelectorAll('.vx').forEach(v => { v.style.animation = 'none'; void v.offsetWidth; v.style.animation = ''; });
+    animate(l.querySelector('.fbbox') || l, .05, .05);
+    if (l.classList.contains('inline')) s.classList.add('answered');
+    if (name === 'fb-ok') play('correct');                              // sounds only on question feedback
+    else if (name === 'fb-bad' || name === 'fb-retry') play('wrong');
+    updateNav();
+  }
+  function hideLayers(s){ s.querySelectorAll('.layer.show').forEach(l => l.classList.remove('show')); s.classList.remove('answered'); if (s === slides[cur]) updateNav(); }
+
+  const fns = {};
+  stage.addEventListener('click', e => {
+    const a = e.target.closest('[data-act]'); if (!a) return;
+    const s = a.closest('.slide'), act = a.dataset.act;
+    if (a.dataset.sfx) play(a.dataset.sfx); else if (act !== 'next') play('click');   // no sound when moving between slides
+    if (act === 'next') next();
+    else if (act === 'close') hideLayers(s);
+    else if (act.startsWith('layer:')) showLayer(s, act.slice(6));
+    else if (act.startsWith('fn:')) fns[act.slice(3)](s, a);
+  });
+
+  /* ---- map cards ---- */
+  document.querySelectorAll('.mcard').forEach(c => c.addEventListener('click', () => {
+    if (c.classList.contains('locked')) return;
+    go(idx(c.dataset.go));
+  }));
+
+  /* ---- choice questions: answer -> "בדיקה" -> correct / incorrect layer ---- */
+  document.querySelectorAll('.slide.choice').forEach(s => {
+    const opts = [...s.querySelectorAll('.opt')], chk = s.querySelector('.check');
+    opts.forEach(o => o.addEventListener('click', () => { play('click'); opts.forEach(x => x.classList.remove('sel')); o.classList.add('sel'); chk.disabled = false; }));
+    chk.addEventListener('click', () => {
+      const sel = s.querySelector('.opt.sel'); if (!sel) return;
+      chk.style.display = 'none';   // no "בדיקה" once the answer was checked
+      showLayer(s, sel.dataset.correct === '1' ? 'fb-ok' : 'fb-bad');
+    });
+  });
+
+  /* ---- screenshot questions: the correct area (.hs) = correct; anywhere else on the slide = incorrect.
+         1st miss -> "נסו שוב", 2nd miss -> incorrect + the correct area is revealed ---- */
+  // feedback: correct = Maya with thumbs up, incorrect = disappointed Maya; the back-view Maya is hidden meanwhile
+  function coach(s, type){
+    s.querySelectorAll('.coach').forEach(x => x.classList.toggle('show', x.dataset.coach === type));
+    s.querySelectorAll('.coach.show .vx').forEach(v => { v.style.animation = 'none'; void v.offsetWidth; v.style.animation = ''; });
+    const ab = s.querySelector('.agent-back');
+    if (ab) ab.style.visibility = type ? 'hidden' : '';
+    if (type) play(type === 'ok' ? 'correct' : 'wrong');
+    const c = s.querySelector('.coach[data-coach="retry"]');
+    clearTimeout(c._t);
+    if (type === 'retry') c._t = setTimeout(() => coach(s, null), 2200);
+  }
+  document.querySelectorAll('.slide.screen').forEach(s => {
+    const shot = s.querySelector('.shot');
+    const hss = [...shot.querySelectorAll('.hs')];
+    const steps = s.classList.contains('steps');   // several areas on one slide, "continue" button inside the bubble
+    let expect = 1, misses = 0, finished = false, waiting = false;
+    s.addEventListener('click', e => {
+      if (finished || waiting || e.target.closest('.layer, [data-act], button')) return;
+      if (s.querySelector('.layer.show')) return;
+      const hs = e.target.closest('.hs');
+      if (hs && +hs.dataset.step === expect) {
+        hs.classList.remove('reveal'); hs.classList.add('hit');
+        if (hs.dataset.onhit) fns[hs.dataset.onhit](s, hs);
+        expect++; misses = 0;
+        if (steps) {
+          const okc = s.querySelector('.coach[data-coach="ok"]');
+          okc.querySelector('.okmsg').textContent = hs.dataset.msg;
+          okc.querySelector('.cont').textContent = hs.dataset.btn;
+          waiting = true; coach(s, 'ok');
+          if (s.dataset[`step${expect - 1}`]) fns[s.dataset[`step${expect - 1}`]](s);
+        } else if (expect > hss.length) {
+          finished = true; coach(s, 'ok');
+          if (s.dataset.okfn) fns[s.dataset.okfn](s, shot);
+        } else { coach(s, null); play('correct'); }
+      } else if (++misses < 2) {
+        coach(s, 'retry');
+      } else {
+        coach(s, 'bad');
+        hss.find(h => +h.dataset.step === expect).classList.add('reveal');
+      }
+    });
+    const okCont = s.querySelector('.coach[data-coach="ok"] .cont');
+    const badCont = s.querySelector('.coach[data-coach="bad"] .cont');
+    const afterStep = () => {   // shared by "לשדה הבא" / "ממשיכים" on a multi-step slide
+      waiting = false;
+      coach(s, null);
+      s.querySelectorAll('.steps-list span').forEach(sp => {
+        const n = +sp.dataset.s;
+        sp.classList.toggle('done', n < expect); sp.classList.toggle('cur', n === expect);
+      });
+      if (expect > hss.length) { finished = true; next(); return; }
+      if (s.dataset[`before${expect}`]) fns[s.dataset[`before${expect}`]](s);
+    };
+    if (!steps && okCont) okCont.addEventListener('click', () => next());   // correct answer -> "ממשיכים" in the bubble
+    if (steps) okCont.addEventListener('click', afterStep);
+    // incorrect (after the correct area was revealed) -> "ממשיכים" as well
+    if (badCont) badCont.addEventListener('click', () => {
+      if (!steps) { finished = true; next(); return; }
+      const hs = hss.find(h => +h.dataset.step === expect);   // count the revealed step as done and move to the next field
+      hs.classList.remove('reveal'); hs.classList.add('hit');
+      if (s.dataset[`step${expect}`]) fns[s.dataset[`step${expect}`]](s);
+      expect++; misses = 0;
+      afterStep();
+    });
+  });
+
+  // slide 11: before step 3 the form shows the filled subject + description; after step 3 the status list opens
+  const s11 = document.getElementById('s11');
+  s11.dataset.before3 = 's11fill'; s11.dataset.step3 = 's11status';
+  fns.s11fill = () => { document.getElementById('s11img').src = 'assets/ss-11.jpg'; };
+  fns.s11status = () => document.getElementById('s11dd').classList.add('show');
+  fns.s13Done = () => document.getElementById('s13dd').classList.add('show');
+  fns.s19type = () => {
+    const box = document.getElementById('s19typed');
+    const txt = 'נפת תברואה רמות משמרת'; let i = 0;
+    box.innerHTML = '<span class="caret"></span>';
+    const t = setInterval(() => {
+      i++; box.innerHTML = txt.slice(0, i) + '<span class="caret"></span>';
+
+      if (i >= txt.length) {
+        clearInterval(t);
+        setTimeout(() => {
+          box.style.display = 'none';
+          document.getElementById('s19cover').classList.add('gone');
+          document.getElementById('s19inst').innerHTML = '<p>מצאתם את תוצאות החיפוש – <b>אלה אנשי הקשר</b> שאליהם יש להעביר את הפנייה להמשך טיפול.</p>';
+
+        }, 350);
+      }
+    }, 80);
+  };
+
+  /* ---- drag & drop ---- */
+  (function(){
+    const s = document.getElementById('s20');
+    const W = 167, H = 122;
+    const cards = [...s.querySelectorAll('.dd-card')];
+    const slots = [...s.querySelectorAll('.dd-slot')];
+    const chk = s.querySelector('.dd-check');
+    const home = new Map(cards.map(c => [c, {l: c.style.left, t: c.style.top}]));
+    const place = new Map(); // slot -> card
+    let tries = 0, solved = false;
+    const slotOf = c => [...place.entries()].find(([, v]) => v === c)?.[0];
+    function toHome(c){ const h = home.get(c); c.style.left = h.l; c.style.top = h.t; const sl = slotOf(c); if (sl) place.delete(sl); }
+    function toSlot(c, sl){
+      const prev = place.get(sl), from = slotOf(c);
+      if (from) place.delete(from);
+      if (prev && prev !== c) { if (from) { place.set(from, prev); prev.style.left = from.style.left; prev.style.top = from.style.top; } else toHome(prev); }
+      place.set(sl, c); c.style.left = sl.style.left; c.style.top = sl.style.top;
+    }
+    function refresh(){ chk.disabled = place.size !== 6; cards.forEach(c => c.classList.remove('right', 'wrong')); }
+    cards.forEach(c => c.addEventListener('pointerdown', e => {
+      if (solved) return;
+      e.preventDefault(); c.setPointerCapture(e.pointerId);
+      const r = stage.getBoundingClientRect();
+      const ox = (e.clientX - r.left) / k - parseFloat(c.style.left), oy = (e.clientY - r.top) / k - parseFloat(c.style.top);
+      c.classList.add('dragging');
+      let over = null;
+      const move = ev => {
+        const x = (ev.clientX - r.left) / k - ox, y = (ev.clientY - r.top) / k - oy;
+        c.style.left = x + 'px'; c.style.top = y + 'px';
+        const cx = x + W / 2, cy = y + H / 2;
+        over = slots.find(sl => { const l = parseFloat(sl.style.left), t = parseFloat(sl.style.top); return cx > l && cx < l + W && cy > t && cy < t + H; }) || null;
+        slots.forEach(sl => sl.classList.toggle('over', sl === over));
+      };
+      const up = () => {
+        c.removeEventListener('pointermove', move); c.removeEventListener('pointerup', up);
+        c.classList.remove('dragging'); slots.forEach(sl => sl.classList.remove('over'));
+        if (over) toSlot(c, over); else toHome(c);
+        refresh();
+      };
+      c.addEventListener('pointermove', move); c.addEventListener('pointerup', up);
+    }));
+    chk.addEventListener('click', () => {
+      let ok = true;
+      place.forEach((c, sl) => { const good = c.dataset.order === sl.dataset.slot; c.classList.add(good ? 'right' : 'wrong'); if (!good) ok = false; });
+      chk.style.display = 'none';                     // the check button disappears once there is an answer
+      if (ok) { solved = true; showLayer(s, 'fb-ok'); }
+      else if (++tries < 2) showLayer(s, 'fb-retry');
+      else showLayer(s, 'fb-bad');
+    });
+    fns.ddRetry = () => {
+      chk.style.display = '';
+      hideLayers(s);
+      [...place.entries()].forEach(([sl, c]) => { if (c.dataset.order !== sl.dataset.slot) toHome(c); });
+      refresh(); place.forEach(c => c.classList.add('right'));
+    };
+    fns.ddShow = () => {   // after the second miss: arrange the correct order
+      hideLayers(s); solved = true;
+      cards.forEach(c => { const sl = slots.find(x => x.dataset.slot === c.dataset.order); place.set(sl, c); c.style.left = sl.style.left; c.style.top = sl.style.top; c.classList.remove('wrong'); c.classList.add('right'); });
+      chk.disabled = true; s.querySelector('.dd-next').style.display = 'flex';
+    };
+  })();
+
+  window.lesson = { go: id => go(typeof id === 'number' ? id : idx(id), true) };
+  go(0, true);
+})();
+</script>
+</body>
+</html>
